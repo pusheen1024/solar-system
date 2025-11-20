@@ -2,6 +2,7 @@
 #include "textbox.h"
 #include "label.h"
 #include "button.h"
+#include "planets.h"
 
 using namespace std;
 
@@ -10,11 +11,9 @@ const int HEIGHT = 600;
 const int BAR = 350;
 const ptt CENTER = {(WIDTH - BAR) / 2, HEIGHT / 2};
 
-vector<const char*> paths = {"sun.png"};
+vector<const char*> paths = {"sun.png", "mercury.png", "venus.png", "earth.png", "mars.png", "jupiter.png", "saturn.png", "uranus.png", "neptune.png"};
 vector<Image> images(1);
 vector<Texture2D> textures(1);
-
-const int SUN = 0;
 
 void load_images() {
 	for (int i = 0; i < paths.size(); i++) {
@@ -26,14 +25,6 @@ void load_images() {
 	}
 }
 
-void render_image(int id, ptt coords) {
-	Image image = images[id];
-	Texture2D texture = textures[id];
-	int image_width = image.width;
-	int image_height = image.height;
-	DrawTexture(texture, coords.x - image_width / 2, coords.y - image_height / 2, WHITE);
-}
-
 int main() {
     InitWindow(WIDTH, HEIGHT, "Компьютерная модель Солнечной системы");
     SetTargetFPS(60); 
@@ -42,7 +33,7 @@ int main() {
     TextBox input_mass = TextBox(WIDTH - BAR + 15 + label_mass.getLength(), 0, 30, BLACK, RED);
 	Label label_velocity = Label("Velocity", WIDTH - BAR, 40, 30, RED);
 	TextBox input_velocity = TextBox(WIDTH - BAR + 15 + label_velocity.getLength(), 40, 30, BLACK, RED);
-	Button button = Button("Render", WIDTH - BAR, 150, 30, BLACK, BLUE);
+	Button button = Button("Render", WIDTH - BAR + 120, 150, 30, BLACK, BLUE);
 	Label label_error = Label("", WIDTH - BAR, 200, 30, RED);
 	auto model_comet = [&]() {
 		ld mass = input_mass.getValue();
@@ -50,6 +41,7 @@ int main() {
 		if (mass == 0 || velocity == 0) {
 			label_error.setText("Error!");
 		}
+		else label_error.setText("Ok");
 	};
     while (!WindowShouldClose()) {
         BeginDrawing();
