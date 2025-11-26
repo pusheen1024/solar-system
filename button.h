@@ -22,13 +22,13 @@ class Button {
 			return MeasureText(text, font_size);
 		}
 		
-	    bool isInside(ptt coords) {
+	    bool isInside(Vector2 coords) {
 			return (x <= coords.x && coords.x <= x + this->getLength() &&
 				   	y <= coords.y && coords.y <= y + font_size);
 		}
 
 		bool click() {
-			if (this->isInside({GetMouseX(), GetMouseY()})) {
+			if (this->isInside(GetMousePosition())) {
 				return clicked = 1;
 			}
 			return clicked = 0;

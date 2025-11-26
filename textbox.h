@@ -51,7 +51,7 @@ class TextBox {
 			return MeasureText(buffer, font_size);
 		}
 
-	    bool isInside(ptt coords) {
+	    bool isInside(Vector2 coords) {
 			return (x <= coords.x && coords.x <= x + 6 * font_size &&
 				   	y <= coords.y && coords.y <= y + font_size);
 		}	
@@ -66,7 +66,7 @@ class TextBox {
 		}
 
 		void setCursor() {
-			if (this->isInside({GetMouseX(), GetMouseY()})) {
+			if (this->isInside(GetMousePosition())) {
 				if (! cursor) {
 					this->addSymbol(int('|'));
 					cursor = 1;

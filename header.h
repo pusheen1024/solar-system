@@ -6,11 +6,8 @@
 #include <ctime>
 
 #include "raylib.h"
-
-#define x first
-#define y second
+#include "raymath.h"
 
 using namespace std;
 
-typedef pair<int, int> ptt;
 typedef long double ld;

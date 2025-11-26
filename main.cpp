@@ -8,7 +8,7 @@ using namespace std;
 const int WIDTH = 1300;
 const int HEIGHT = 600;
 const int BAR = 350;
-const ptt CENTER = {(WIDTH - BAR) / 2, HEIGHT / 2};
+const Vector2 CENTER = {(WIDTH - BAR) / 2, HEIGHT / 2};
 
 vector<const char*> paths = {"sun.png", "mercury.png", "venus.png", "earth.png", "mars.png", "jupiter.png", "saturn.png", "uranus.png", "neptune.png"};
 vector<Image> images(paths.size());
@@ -33,9 +33,12 @@ class CosmicObject {
 		int x;
 		int y;
 
-		CosmicObject() {}
+		CosmicObject() {
+			this->x = CENTER.x;
+			this->y = CENTER.y;
+		}
 
-		CosmicObject(ptt coords) {
+		CosmicObject(Vector2 coords) {
 			this->x = coords.x;
 			this->y = coords.y;
 		}
@@ -48,7 +51,8 @@ class CosmicObject {
 			Image image = images[picture_id];
 			if (! is_resized) {
 				int scale = 1e2;
-				if (picture_id == 0) scale = 1e4;
+				if (picture_id == 0) scale = 1e5;
+				if (picture_id > 4) scale = 1e3;
 				ImageResize(&image, diam / scale, diam / scale);
 				Texture2D texture = LoadTextureFromImage(image);
 				textures[picture_id] = texture;
@@ -64,7 +68,7 @@ class CosmicObject {
 
 class Sun: public CosmicObject {
 	public:
-		Sun(ptt coords) : CosmicObject(coords) {
+		Sun() : CosmicObject() {
 			this->mass = 1.9885e30;
 			this->picture_id = 0;
 			this->diam = 1392700;
@@ -77,21 +81,22 @@ class Planet: public CosmicObject {
 		ld e; // эксцентриситет
 
 	public:
-		Planet(ptt coords): CosmicObject(coords) {}
+		Planet(): CosmicObject() {}
 		ld getB() {return a * sqrt(1 - e * e); }
 
 		void updateCoords(ld t) {
-			x = CENTER.x + a * cos(t);
-			y = CENTER.y + getB() * sin(t);
+			x = CENTER.x + a * 0.3 * cos(t);
+			y = CENTER.y + getB() * 0.3 * sin(t);
 		}
 };
 
 class Mercury: public Planet {
 	public:
-		Mercury(ptt coords) : Planet(coords) {
+		Mercury() : Planet() {
 			this->mass = 3.285e23;
 			this->picture_id = 1;
 			this->a = 57.91;
+			this->x -= this->a * 0.3;
 			this->e = 0.206;
 			this->diam = 4879.4;
 		}
@@ -99,10 +104,11 @@ class Mercury: public Planet {
 
 class Venus: public Planet {
 	public:
-		Venus(ptt coords) : Planet(coords) {
+		Venus() : Planet() {
 			this->mass = 4.867e24;
 			this->picture_id = 2;
 			this->a = 108.2;
+			this->x -= this->a * 0.3;
 			this->e = 0.0068;
 			this->diam = 12104;
 		}
@@ -110,10 +116,11 @@ class Venus: public Planet {
 
 class Earth: public Planet {
 	public:
-		Earth(ptt coords) : Planet(coords) {
+		Earth() : Planet() {
 			this->mass = 5.9742e24;
 			this->picture_id = 3;
 			this->a = 150;
+			this->x -= this->a * 0.3;
 			this->e = 0.0167;
 			this->diam = 12742;
 		}
@@ -121,10 +128,11 @@ class Earth: public Planet {
 
 class Mars: public Planet {
 	public:
-		Mars(ptt coords) : Planet(coords) {
+		Mars() : Planet() {
 			this->mass = 6.39e23;
 			this->picture_id = 4;
 			this->a = 228;
+			this->x -= this->a * 0.3;
 			this->e = 0.00934;
 			this->diam = 6779;
 		}
@@ -132,10 +140,11 @@ class Mars: public Planet {
 
 class Jupiter: public Planet {
 	public:
-		Jupiter(ptt coords) : Planet(coords) {
+		Jupiter() : Planet() {
 			this->mass = 1.8987e27;
 			this->picture_id = 5;
 			this->a = 778;
+			this->x -= this->a * 0.3;
 			this->e = 0.049;
 			this->diam = 139820;
 		}
@@ -143,10 +152,11 @@ class Jupiter: public Planet {
 
 class Saturn: public Planet {
 	public:
-		Saturn(ptt coords) : Planet(coords) {
+		Saturn() : Planet() {
 			this->mass = 5.683e26;
 			this->picture_id = 6;
 			this->a = 1429;
+			this->x -= this->a * 0.3;
 			this->e = 0.0557;
 			this->diam = 116460;
 		}
@@ -154,10 +164,11 @@ class Saturn: public Planet {
 
 class Uranus: public Planet {
 	public:
-		Uranus(ptt coords) : Planet(coords) {
+		Uranus() : Planet() {
 			this->mass = 8.681e25;
 			this->picture_id = 7;
 			this->a = 2875;
+			this->x -= this->a * 0.3;
 			this->e = 0.047;
 			this->diam = 50724;
 		}
@@ -165,10 +176,11 @@ class Uranus: public Planet {
 
 class Neptune: public Planet {
 	public:
-		Neptune(ptt coords) : Planet(coords) {
+		Neptune() : Planet() {
 			this->mass = 1.024e26;
 			this->picture_id = 8;
 			this->a = 4497;
+			this->x -= this->a * 0.3;
 			this->e = 0.2488;
 			this->diam = 2376.6;
 		}
@@ -178,6 +190,8 @@ int main() {
     InitWindow(WIDTH, HEIGHT, "Компьютерная модель Солнечной системы");
     SetTargetFPS(60); 
 	load_images();
+	Camera2D camera = {0};
+	camera.zoom = 1;
 	Label label_mass = Label("Mass", WIDTH - BAR, 0, 30, RED);
     TextBox input_mass = TextBox(WIDTH - BAR + 15 + label_mass.getLength(), 0, 30, BLACK, RED);
 	Label label_velocity = Label("Velocity", WIDTH - BAR, 40, 30, RED);
@@ -192,20 +206,21 @@ int main() {
 		}
 		else label_error.setText("Ok");
 	};
-	Sun sun = Sun(CENTER);
-	Mercury mercury = Mercury({CENTER.x - 100, CENTER.y});
-	Venus venus = Venus({CENTER.x - 200, CENTER.y});
-	Earth earth = Earth({CENTER.x - 300, CENTER.y});
-	Mars mars = Mars({CENTER.x - 400, CENTER.y});
-	Jupiter jupiter = Jupiter({CENTER.x - 500, CENTER.y});
-	Saturn saturn = Saturn({CENTER.x - 600, CENTER.y});
-	Uranus uranus = Uranus({CENTER.x - 700, CENTER.y});
-	Neptune neptune = Neptune({CENTER.x - 800, CENTER.y});
+	Sun sun = Sun();
+	Mercury mercury = Mercury();
+	Venus venus = Venus();
+	Earth earth = Earth();
+	Mars mars = Mars();
+	Jupiter jupiter = Jupiter();
+	Saturn saturn = Saturn();
+	Uranus uranus = Uranus();
+	Neptune neptune = Neptune();
 	vector<Planet*> planets = {&mercury, &venus, &earth, &mars, &jupiter, &saturn, &uranus, &neptune};
 	ld t = 0;
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(BLACK);
+		BeginMode2D(camera);
 		DrawRectangle(WIDTH - BAR, 0, BAR, HEIGHT, WHITE);
 		label_mass.render();
 		input_mass.render();
@@ -217,6 +232,18 @@ int main() {
 			input_mass.setCursor();
 			input_velocity.setCursor();
 			if (button.click()) model_comet();
+		}
+		if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
+			Vector2 delta = GetMouseDelta();
+			delta /= (-camera.zoom);
+			camera.target += delta;
+		}
+		ld wheel = GetMouseWheelMove();
+		if (wheel != 0) {
+			auto pos = GetScreenToWorld2D(GetMousePosition(), camera);
+			camera.offset = GetMousePosition();
+			camera.target = pos;
+			camera.zoom += (wheel * 0.2);
 		}
 		if (input_mass.isActive()) {
 			input_mass.handleKeyboard();
@@ -231,6 +258,7 @@ int main() {
 		for (auto planet : planets) {
 			(*planet).render();
 		}
+		EndMode2D();
 		EndDrawing();
 		t += 0.05;
     }
