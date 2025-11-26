@@ -228,14 +228,14 @@ int main() {
 		label_velocity.render();
 		input_velocity.render();
 		label_error.render();
-		if (IsMouseButtonDown(0)) {
+		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
 			input_mass.setCursor();
 			input_velocity.setCursor();
 			if (button.click()) model_comet();
 		}
 		if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
 			Vector2 delta = GetMouseDelta();
-			delta /= (-camera.zoom);
+			delta /= (-1 / camera.zoom);
 			camera.target += delta;
 		}
 		ld wheel = GetMouseWheelMove();
@@ -244,6 +244,7 @@ int main() {
 			camera.offset = GetMousePosition();
 			camera.target = pos;
 			camera.zoom += (wheel * 0.2);
+			if (camera.zoom < 0.2) camera.zoom = 0.2;
 		}
 		if (input_mass.isActive()) {
 			input_mass.handleKeyboard();
