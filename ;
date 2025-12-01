@@ -8,14 +8,11 @@ using namespace std;
 const int WIDTH = 1300;
 const int HEIGHT = 600;
 const int BAR = 350;
-const int SPACING = 1;
 const Vector2 CENTER = {(WIDTH - BAR) / 2, HEIGHT / 2};
 
 vector<const char*> paths = {"sun.png", "mercury.png", "venus.png", "earth.png", "mars.png", "jupiter.png", "saturn.png", "uranus.png", "neptune.png"};
 vector<Image> images(paths.size());
 vector<Texture2D> textures(paths.size());
-
-Font font;
 
 void load_images() {
 	for (int i = 0; i < paths.size(); i++) {
@@ -25,24 +22,16 @@ void load_images() {
 	}
 }
 
-void load_font() {
-	int codepoints[512] = { 0 };
-	for (int i = 0; i < 95; i++) codepoints[i] = 32 + i;   // символы ASCII
-	for (int i = 0; i < 255; i++) codepoints[96 + i] = 0x400 + i;   // кириллица
-	font = LoadFontEx("segoeprint_bold.ttf", 32, codepoints, 512);
-}
-
 class CosmicObject {
 	protected:
 		ld mass;
 		ld diam;
 		int picture_id;
 		bool is_resized = 0;
-		const char* name;
 
 	public:
-		float x;
-		float y;
+		int x;
+		int y;
 
 		CosmicObject() {
 			this->x = CENTER.x;
@@ -74,7 +63,6 @@ class CosmicObject {
 			int image_height = image.height;
 			DrawTexture(texture, x - image_width / 2, 
 						y - image_height / 2, WHITE);
-			DrawTextEx(font, name, {x - image_height / 2, y - image_height / 2}, 20, SPACING, WHITE);
 		}
 };
 
@@ -84,7 +72,6 @@ class Sun: public CosmicObject {
 			this->mass = 1.9885e30;
 			this->picture_id = 0;
 			this->diam = 1392700;
-			this->name = "Солнце";
 		}
 };
 
@@ -95,7 +82,6 @@ class Planet: public CosmicObject {
 
 	public:
 		Planet(): CosmicObject() {}
-		ld getA() {return a; }
 		ld getB() {return a * sqrt(1 - e * e); }
 
 		void updateCoords(ld t) {
@@ -113,7 +99,6 @@ class Mercury: public Planet {
 			this->x -= this->a * 0.3;
 			this->e = 0.206;
 			this->diam = 4879.4;
-			this->name = "Меркурий";
 		}
 };
 
@@ -126,7 +111,6 @@ class Venus: public Planet {
 			this->x -= this->a * 0.3;
 			this->e = 0.0068;
 			this->diam = 12104;
-			this->name = "Венера";
 		}
 };
 
@@ -139,7 +123,6 @@ class Earth: public Planet {
 			this->x -= this->a * 0.3;
 			this->e = 0.0167;
 			this->diam = 12742;
-			this->name = "Земля";
 		}
 };
 
@@ -152,7 +135,6 @@ class Mars: public Planet {
 			this->x -= this->a * 0.3;
 			this->e = 0.00934;
 			this->diam = 6779;
-			this->name = "Марс";
 		}
 };
 
@@ -165,7 +147,6 @@ class Jupiter: public Planet {
 			this->x -= this->a * 0.3;
 			this->e = 0.049;
 			this->diam = 139820;
-			this->name = "Юпитер";
 		}
 };
 
@@ -178,7 +159,6 @@ class Saturn: public Planet {
 			this->x -= this->a * 0.3;
 			this->e = 0.0557;
 			this->diam = 116460;
-			this->name = "Сатурн";
 		}
 };
 
@@ -191,7 +171,6 @@ class Uranus: public Planet {
 			this->x -= this->a * 0.3;
 			this->e = 0.047;
 			this->diam = 50724;
-			this->name = "Уран";
 		}
 };
 
@@ -204,7 +183,6 @@ class Neptune: public Planet {
 			this->x -= this->a * 0.3;
 			this->e = 0.2488;
 			this->diam = 2376.6;
-			this->name = "Нептун";
 		}
 };
 
@@ -212,21 +190,19 @@ int main() {
     InitWindow(WIDTH, HEIGHT, "Компьютерная модель Солнечной системы");
     SetTargetFPS(60); 
 	load_images();
-	load_font();
 	Camera2D camera = {0};
 	camera.zoom = 1;
-	Label label_mass = Label("Масса кометы", WIDTH - BAR, 0, font, 30, RED);
+	Label label_mass = Label("Mass", WIDTH - BAR, 0, 30, RED);
     TextBox input_mass = TextBox(WIDTH - BAR + 15 + label_mass.getLength(), 0, 30, BLACK, RED);
-	Label label_velocity = Label("Скорость кометы", WIDTH - BAR, 40, font, 30, RED);
+	Label label_velocity = Label("Velocity", WIDTH - BAR, 40, 30, RED);
 	TextBox input_velocity = TextBox(WIDTH - BAR + 15 + label_velocity.getLength(), 40, 30, BLACK, RED);
-	Button button = Button("Смоделировать перелёт кометы", WIDTH - BAR, 150, font, 30, BLACK, BLUE);
-	Label label_info = Label("Для приближения используйте колёсико мыши,\n для перемещения - правую кнопку мыши.", WIDTH - BAR, 400, font, 20, RED);
-	Label label_error = Label("", WIDTH - BAR, 250, font, 30, RED);
+	Button button = Button("Render", WIDTH - BAR + 120, 150, 30, BLACK, BLUE);
+	Label label_error = Label("Mouse wheel for zoom, right mouse button for movement", WIDTH - BAR, 200, 14, RED);
 	auto model_comet = [&]() {
 		ld mass = input_mass.getValue();
 		ld velocity = input_velocity.getValue();
 		if (mass == 0 || velocity == 0) {
-			label_error.setText("Ошибка!");
+			label_error.setText("Error!");
 		}
 		else label_error.setText("Ok");
 	};
@@ -244,6 +220,7 @@ int main() {
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(BLACK);
+		BeginMode2D(camera);
 		DrawRectangle(WIDTH - BAR, 0, BAR, HEIGHT, WHITE);
 		label_mass.render();
 		input_mass.render();
@@ -251,7 +228,6 @@ int main() {
 		label_velocity.render();
 		input_velocity.render();
 		label_error.render();
-		label_info.render();
 		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
 			input_mass.setCursor();
 			input_velocity.setCursor();
@@ -259,7 +235,7 @@ int main() {
 		}
 		if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
 			Vector2 delta = GetMouseDelta();
-			delta *= (-1 / camera.zoom);
+			delta /= (-1 / camera.zoom);
 			camera.target += delta;
 		}
 		ld wheel = GetMouseWheelMove();
@@ -276,7 +252,6 @@ int main() {
 		else if (input_velocity.isActive()) {
 			input_velocity.handleKeyboard();
 		}
-		BeginMode2D(camera);
 		sun.render();
 		for (auto planet : planets) {
 			(*planet).updateCoords(t);
@@ -287,7 +262,7 @@ int main() {
 		EndMode2D();
 		EndDrawing();
 		t += 0.05;
-	}
+    }
     CloseWindow(); 
     return 0;
 }

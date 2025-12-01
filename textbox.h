@@ -10,6 +10,7 @@ class TextBox {
 		Color font_color;
 		Color background_color;
 		bool cursor = 0;
+		bool dot = 0;
 		
 	public:
 		TextBox(int x, int y, int font_size, Color font_color, Color background_color) {
@@ -21,14 +22,15 @@ class TextBox {
 		}
 		
 		void addDigit(int key) {
-			if (key < int('0') || key > int('9')) return;
+			if ((key < int('0') || key > int('9')) && (char)key != '.') return;
 			addSymbol(key);
 		}
 
 		void addSymbol(int key) {
-			if (count >= 10) return;
+			if (count >= 10 || ((char)key == '.' && dot)) return;
 			if (cursor) count--;
 			buffer[count] = char(key);
+			if (buffer[count] == '.') dot ^= 1;
 			count++;
 			if (cursor) {
 				buffer[count] = '|';
@@ -39,9 +41,13 @@ class TextBox {
 
 		void removeSymbol() {
 			if (! count) return;
-			if (! cursor) count--;
+			if (! cursor) {
+				if (buffer[count] == '.') dot ^= 1;
+				count--;
+			}
 			else if (count > 1) {
 				count--;
+				if (buffer[count - 1] == '.') dot ^= 1;
 				buffer[count - 1] = '|';
 			}
 			buffer[count] = '\0';
@@ -62,7 +68,7 @@ class TextBox {
 
 		int getValue() {
 			if (! this->buffer) return 0;
-			return TextToInteger(this->buffer);
+			return TextToFloat(this->buffer);
 		}
 
 		void setCursor() {

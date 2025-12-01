@@ -1,25 +1,28 @@
 class Button {
 	private:
 		const char* text;
+		float x;
+		float y; 
+		Font font;
 		int font_size;
-		int x;
-   		int y;
 		Color font_color;
 		Color background_color;
+		int spacing = 1;
 		bool clicked = 0;
 	
 	public:
-		Button(const char* text, int x, int y, int font_size, Color font_color, Color background_color) {
+		Button(const char* text, float x, float y, Font font, int font_size, Color font_color, Color background_color) {
 			this->text = text;
-			this->font_size = font_size;
 			this->x = x;
 			this->y = y;
+			this->font = font;
+			this->font_size = font_size;
 			this->font_color = font_color;
 			this->background_color = background_color;
 		}
 	
 		int getLength() {
-			return MeasureText(text, font_size);
+			return MeasureTextEx(font, text, font_size, spacing).x;
 		}
 		
 	    bool isInside(Vector2 coords) {
@@ -36,6 +39,6 @@ class Button {
 
 		void render() {
 			DrawRectangle(x, y, this->getLength(), font_size, background_color);
-			DrawText(text, x, y, font_size, font_color);
+			DrawTextEx(font, text, {x, y}, font_size, spacing, font_color);
 		}
 };
