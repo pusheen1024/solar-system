@@ -53,10 +53,6 @@ class TextBox {
 			buffer[count] = '\0';
 		}
 			
-		int getLength() {
-			return MeasureText(buffer, font_size);
-		}
-
 	    bool isInside(Vector2 coords) {
 			return (x <= coords.x && coords.x <= x + 6 * font_size &&
 				   	y <= coords.y && coords.y <= y + font_size);
@@ -99,4 +95,3 @@ class TextBox {
 			DrawText(buffer, x, y, font_size, font_color);
 		}
 };
-
