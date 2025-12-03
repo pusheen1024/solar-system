@@ -3,7 +3,7 @@
 using namespace std;
 
 class Label {
-	private:
+	public:
 		const char* text;
 		float x;
 		float y;

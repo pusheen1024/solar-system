@@ -1,7 +1,7 @@
 #include "header.h"
 
 class Button {
-	private:
+	public:
 		const char* text;
 		float x;
 		float y; 
@@ -48,13 +48,14 @@ class Button {
 };
 
 class CheckBox {
-	private:
+	public:
 		Button btn1;
 		Button btn2;
-		bool state = 0;
+		bool state = 0; 
 
 	public:
-		CheckBox() {}
+		CheckBox() {
+		}
 
 		CheckBox(vector<const char*> texts, float x, float y, Font font, int font_size, Color font_color, vector<Color> bg_colors) {
 			btn1 = Button(texts[0], x, y, font, font_size, font_color, bg_colors[0]);
@@ -66,7 +67,11 @@ class CheckBox {
 			else btn1.render();
 		}
 
-		void toggle() {
-			if (btn1.isInside(GetMousePosition())) state ^= 1;
+		bool toggle() {
+			if (btn1.isInside(GetMousePosition())) {
+				state ^= 1;
+				return 1;
+			}
+			return 0;
 		}
 };

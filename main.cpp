@@ -19,7 +19,7 @@ Font font;
 vector<const char*> paths = {"sun.png", "mercury.png", "venus.png", "earth.png", "mars.png", "jupiter.png", "saturn.png", "uranus.png", "neptune.png"};
 vector<Image> images(paths.size());
 vector<Texture2D> textures(paths.size());
-vector<bool> show_object(paths.size(), 1);
+vector<int> show_object(paths.size(), 1);
 
 void load_images() {
 	for (int i = 0; i < paths.size(); i++) {
@@ -300,13 +300,18 @@ int main() {
 	Uranus uranus = Uranus();
 	Neptune neptune = Neptune();
 	vector<Planet*> planets = {&mercury, &venus, &earth, &mars, &jupiter, &saturn, &uranus, &neptune};
+	vector<CosmicObject*> cosmic_objects(planets.begin(), planets.end());
+	reverse(cosmic_objects.begin(), cosmic_objects.end());
+	cosmic_objects.push_back(&sun);
+	reverse(cosmic_objects.begin(), cosmic_objects.end());
 	vector<Label> labels;
 	vector<CheckBox> checkboxes;
 	vector<const char*> texts = {"Скрыть", "Отобразить"};
 	vector<Color> colors = {RED, GREEN};
 	int x = 180;
-	for (auto planet : planets) {
-		labels.push_back(Label((*planet).getInfo(), WIDTH - BAR, x, font, 20, RED));
+	for (auto obj : cosmic_objects) {
+		cout << (*obj).getInfo() << '\n';
+		labels.push_back(Label((*obj).getInfo(), WIDTH - BAR, x, font, 20, RED));
 		checkboxes.push_back(CheckBox(texts, WIDTH - BAR + 100, x, font, 20, BLACK, colors));
 		x += 20;
 	}
@@ -325,16 +330,19 @@ int main() {
 		input_velocity.render();
 		label_error.render();
 		label_info.render();
-		for (auto label : labels) 
+		for (auto label : labels) {
 			label.render();
+			cout << label.text << '\n';
+		}
 		for (auto chkbx : checkboxes) 
-			chkbx.render();
+			(&chkbx)->render();
 		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
 			input_mass.setCursor();
 			input_velocity.setCursor();
 			if (button.click()) model_comet();
-			for (auto chkbx : checkboxes) 
-				chkbx.toggle();
+			for (int i = 0; i < checkboxes.size(); i++) {
+				if (checkboxes[i].toggle()) show_object[i] ^= 1;
+			}
 			if (inc.click() && COEFF < 300) {
 				COEFF++;
 				coeff_changed = 1;
@@ -376,9 +384,6 @@ int main() {
 		sun.render();
 		for (auto planet : planets) {
 			if (! coeff_changed) (*planet).updateCoords(t);
-		}
-		for (auto planet : planets) {
-
 		}
 		for (auto planet : planets) {
 			(*planet).drawOrbit();
