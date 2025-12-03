@@ -1,10 +1,11 @@
 #include "header.h"
+#include <cstring>
 
 using namespace std;
 
 class Label {
 	public:
-		const char* text;
+		char* text;
 		float x;
 		float y;
 		Font font;
@@ -15,8 +16,8 @@ class Label {
 	public:
 		Label() {}
 
-		Label(const char* text, float x, float y, Font font, int font_size, Color font_color) {
-			this->text = text;
+		Label(const char* info, float x, float y, Font font, int font_size, Color font_color) {
+			this->setText(info);
 			this->x = x;
 			this->y = y;
 			this->font = font;
@@ -28,8 +29,9 @@ class Label {
 			return MeasureTextEx(font, text, font_size, spacing).x;
 		}
 
-		void setText(const char* text) {
-			this->text = text;
+		void setText(const char* info) {
+			text = new char[strlen(info) + 1];
+            strcpy(this->text, info);
 		}
 
 		void render() {

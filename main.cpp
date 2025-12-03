@@ -2,6 +2,7 @@
 #include "textbox.h"
 #include "label.h"
 #include "button.h"
+#include <cstring> 
 
 using namespace std;
 
@@ -300,19 +301,20 @@ int main() {
 	Uranus uranus = Uranus();
 	Neptune neptune = Neptune();
 	vector<Planet*> planets = {&mercury, &venus, &earth, &mars, &jupiter, &saturn, &uranus, &neptune};
-	vector<CosmicObject*> cosmic_objects(planets.begin(), planets.end());
-	reverse(cosmic_objects.begin(), cosmic_objects.end());
-	cosmic_objects.push_back(&sun);
-	reverse(cosmic_objects.begin(), cosmic_objects.end());
-	vector<Label> labels;
-	vector<CheckBox> checkboxes;
+	vector<CosmicObject*> objects = {&sun};
+	for (auto planet : planets) objects.push_back(planet);
+	int n = objects.size();
+	vector<Label> labels(n);
+	vector<CheckBox> checkboxes(n);
 	vector<const char*> texts = {"Скрыть", "Отобразить"};
 	vector<Color> colors = {RED, GREEN};
 	int x = 180;
-	for (auto obj : cosmic_objects) {
-		cout << (*obj).getInfo() << '\n';
-		labels.push_back(Label((*obj).getInfo(), WIDTH - BAR, x, font, 20, RED));
-		checkboxes.push_back(CheckBox(texts, WIDTH - BAR + 100, x, font, 20, BLACK, colors));
+	for (int i = 0; i < n; i++) {
+		auto info = sun.getInfo();
+		if (i > 0) info = planets[i - 1]->getInfo();
+		labels[i] = Label("", WIDTH - BAR, x, font, 20, RED);
+		labels[i].setText(info);
+		checkboxes[i] = CheckBox(texts, WIDTH - BAR + 100, x, font, 20, BLACK, colors);
 		x += 20;
 	}
 	ld t = 0;
@@ -330,17 +332,14 @@ int main() {
 		input_velocity.render();
 		label_error.render();
 		label_info.render();
-		for (auto label : labels) {
-			label.render();
-			cout << label.text << '\n';
-		}
+		for (int i = 0; i < n; i++) labels[i].render();
 		for (auto chkbx : checkboxes) 
 			(&chkbx)->render();
 		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
 			input_mass.setCursor();
 			input_velocity.setCursor();
 			if (button.click()) model_comet();
-			for (int i = 0; i < checkboxes.size(); i++) {
+			for (int i = 0; i < n; i++) {
 				if (checkboxes[i].toggle()) show_object[i] ^= 1;
 			}
 			if (inc.click() && COEFF < 300) {

@@ -1,7 +1,7 @@
 #include "header.h"
 
 class Button {
-	public:
+	private:
 		const char* text;
 		float x;
 		float y; 
@@ -48,7 +48,7 @@ class Button {
 };
 
 class CheckBox {
-	public:
+	private:
 		Button btn1;
 		Button btn2;
 		bool state = 0; 
