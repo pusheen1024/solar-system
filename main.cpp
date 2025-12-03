@@ -8,16 +8,18 @@ using namespace std;
 const int WIDTH = 1300;
 const int HEIGHT = 600;
 const int BAR = 350;
-const int SPACING = 1;
-int COEFF = 100;
-const ld EPS = 1e-9;
 const Vector2 CENTER = {(WIDTH - BAR) / 2, HEIGHT / 2};
+
+int COEFF = 100; // скорость движения
+const ld EPS = 1e-9;
+
+const int SPACING = 1; // параметр для шрифта
+Font font;
 
 vector<const char*> paths = {"sun.png", "mercury.png", "venus.png", "earth.png", "mars.png", "jupiter.png", "saturn.png", "uranus.png", "neptune.png"};
 vector<Image> images(paths.size());
 vector<Texture2D> textures(paths.size());
-
-Font font;
+vector<bool> show_object(paths.size(), 1);
 
 void load_images() {
 	for (int i = 0; i < paths.size(); i++) {
@@ -50,13 +52,15 @@ float kepler(float M, float e) {
 }
 
 class CosmicObject {
-	protected:
+	public:
 		ld mass;
 		ld diam;
 		int picture_id;
 		bool is_resized = 0;
 		bool show_text = 1;
+		bool show_planet = 1;
 		const char* name;
+		const char* type;
 		int font_size;
 
 	public:
@@ -75,8 +79,8 @@ class CosmicObject {
 			this->y = coords.y;
 		}
 
-		int getLength() {
-			return MeasureTextEx(font, name, font_size, SPACING).x;
+		const char* getInfo() {
+			return TextFormat("%s - %s с массой %Le кг.", name, type, mass); 
 		}
 
 		Vector2 getCoords() {
@@ -87,35 +91,37 @@ class CosmicObject {
 
 	    bool isInside(Vector2 coords) {
 			auto [image_x, image_y] = this->getCoords();
-			return (image_x <= coords.x && coords.x <= x + this->getLength() &&
-				   	image_y <= coords.y && coords.y <= y + font_size);
+			return (image_x <= coords.x && coords.x <= image_x + image_width &&
+				   	image_y <= coords.y && coords.y <= image_y + image_height);
 		}
 	
-		void showText() {
-			if (this->isInside(GetMousePosition()))
+		void showText(Vector2 mouse_pos) {
+			if (this->isInside(mouse_pos))
 				show_text ^= 1;
 		}
 
 		void render() {
+			if (! show_object[picture_id]) return;
 			Image image = images[picture_id];
 			if (! is_resized) {
 				int scale = 1e2;
 				if (picture_id == 0) scale = 1e5;
-				if (picture_id > 4) scale = 1e2;
+				if (picture_id > 4) scale = 1e3;
 				ImageResize(&image, diam / scale, diam / scale);
 				Texture2D texture = LoadTextureFromImage(image);
 				textures[picture_id] = texture;
 				is_resized = 1;
 			}
 			Texture2D texture = textures[picture_id];
-			image_width = image.width;
-			image_height = image.height;
+			image_width = texture.width;
+			image_height = texture.height;
 			auto [image_x, image_y] = this->getCoords();	
-			DrawTexture(texture, x - image_width / 2, 
-						y - image_height / 2, WHITE);
+			DrawTexture(texture, image_x, image_y, WHITE);
 			if (show_text)
 				DrawTextEx(font, name, {image_x, image_y}, 20, SPACING, WHITE);
 		}
+
+		~CosmicObject() {}
 };
 
 class Sun: public CosmicObject {
@@ -125,6 +131,7 @@ class Sun: public CosmicObject {
 			this->picture_id = 0;
 			this->diam = 1392700;
 			this->name = "Солнце";
+			this->type = "звезда";
 		}
 };
 
@@ -135,7 +142,9 @@ class Planet: public CosmicObject {
 		ld T; // период
 
 	public:
-		Planet(): CosmicObject() {}
+		Planet(): CosmicObject() {
+			this->type = "планета";
+		}
 		ld getA() {return a; }
 		ld getB() {return a * sqrt(1 - e * e); }
 
@@ -146,6 +155,11 @@ class Planet: public CosmicObject {
 			x = CENTER.x + a * (cos(E) - e);
 			y = CENTER.y + getB() * sin(E);
 		}
+
+		void drawOrbit() {
+			if (! show_object[picture_id]) return;
+			DrawEllipseLines(CENTER.x, CENTER.y, this->getA(), this->getB(), BLUE);
+		}
 };
 
 class Mercury: public Planet {
@@ -154,7 +168,6 @@ class Mercury: public Planet {
 			this->mass = 3.285e23;
 			this->picture_id = 1;
 			this->a = 57.91;
-			this->x -= this->a * 0.3;
 			this->e = 0.206;
 			this->diam = 4879.4;
 			this->T = 0.241;
@@ -168,7 +181,6 @@ class Venus: public Planet {
 			this->mass = 4.867e24;
 			this->picture_id = 2;
 			this->a = 108.2;
-			this->x -= this->a * 0.3;
 			this->e = 0.0068;
 			this->diam = 12104;
 			this->T = 0.615;
@@ -182,7 +194,6 @@ class Earth: public Planet {
 			this->mass = 5.9742e24;
 			this->picture_id = 3;
 			this->a = 150;
-			this->x -= this->a * 0.3;
 			this->e = 0.0167;
 			this->diam = 12742;
 			this->T = 1;
@@ -196,7 +207,6 @@ class Mars: public Planet {
 			this->mass = 6.39e23;
 			this->picture_id = 4;
 			this->a = 228;
-			this->x -= this->a * 0.3;
 			this->e = 0.00934;
 			this->diam = 6779;
 			this->T = 1.88;
@@ -210,7 +220,6 @@ class Jupiter: public Planet {
 			this->mass = 1.8987e27;
 			this->picture_id = 5;
 			this->a = 778;
-			this->x -= this->a * 0.3;
 			this->e = 0.049;
 			this->diam = 139820;
 			this->T = 11.86;
@@ -224,7 +233,6 @@ class Saturn: public Planet {
 			this->mass = 5.683e26;
 			this->picture_id = 6;
 			this->a = 1429;
-			this->x -= this->a * 0.3;
 			this->e = 0.0557;
 			this->diam = 116460;
 			this->T = 29.46;
@@ -238,7 +246,6 @@ class Uranus: public Planet {
 			this->mass = 8.681e25;
 			this->picture_id = 7;
 			this->a = 2875;
-			this->x -= this->a * 0.3;
 			this->e = 0.047;
 			this->diam = 50724;
 			this->T = 84.02;
@@ -252,7 +259,6 @@ class Neptune: public Planet {
 			this->mass = 1.024e26;
 			this->picture_id = 8;
 			this->a = 4497;
-			this->x -= this->a * 0.3;
 			this->e = 0.2488;
 			this->diam = 2376.6;
 			this->T = 164.8;
@@ -294,10 +300,20 @@ int main() {
 	Uranus uranus = Uranus();
 	Neptune neptune = Neptune();
 	vector<Planet*> planets = {&mercury, &venus, &earth, &mars, &jupiter, &saturn, &uranus, &neptune};
+	vector<Label> labels;
+	vector<CheckBox> checkboxes;
+	vector<const char*> texts = {"Скрыть", "Отобразить"};
+	vector<Color> colors = {RED, GREEN};
+	int x = 180;
+	for (auto planet : planets) {
+		labels.push_back(Label((*planet).getInfo(), WIDTH - BAR, x, font, 20, RED));
+		checkboxes.push_back(CheckBox(texts, WIDTH - BAR + 100, x, font, 20, BLACK, colors));
+		x += 20;
+	}
 	ld t = 0;
 	bool coeff_changed = 0;
     while (!WindowShouldClose()) {
-        BeginDrawing();
+	    BeginDrawing();
         ClearBackground(BLACK);
 		DrawRectangle(WIDTH - BAR, 0, BAR, HEIGHT, WHITE);
 		label_mass.render();
@@ -309,10 +325,16 @@ int main() {
 		input_velocity.render();
 		label_error.render();
 		label_info.render();
-		if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+		for (auto label : labels) 
+			label.render();
+		for (auto chkbx : checkboxes) 
+			chkbx.render();
+		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
 			input_mass.setCursor();
 			input_velocity.setCursor();
 			if (button.click()) model_comet();
+			for (auto chkbx : checkboxes) 
+				chkbx.toggle();
 			if (inc.click() && COEFF < 300) {
 				COEFF++;
 				coeff_changed = 1;
@@ -322,8 +344,6 @@ int main() {
 				coeff_changed = 1;
 			}
 			else coeff_changed = 0;
-			for (auto planet : planets) 
-				(*planet).showText();
 		}
 		else coeff_changed = 0;
 		if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
@@ -346,11 +366,22 @@ int main() {
 			input_velocity.handleKeyboard();
 		}
 		BeginMode2D(camera);
+		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {			
+			Vector2 real_pos = GetScreenToWorld2D(GetMousePosition(), camera);
+			sun.showText(real_pos);
+			for (auto planet : planets) { 
+				(*planet).showText(real_pos);
+			}
+		}
 		sun.render();
 		for (auto planet : planets) {
 			if (! coeff_changed) (*planet).updateCoords(t);
 		}
 		for (auto planet : planets) {
+
+		}
+		for (auto planet : planets) {
+			(*planet).drawOrbit();
 			(*planet).render();
 		}
 		EndMode2D();

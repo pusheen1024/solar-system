@@ -13,6 +13,8 @@ class Label {
 		int spacing = 1;
 
 	public:
+		Label() {}
+
 		Label(const char* text, float x, float y, Font font, int font_size, Color font_color) {
 			this->text = text;
 			this->x = x;

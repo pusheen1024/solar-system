@@ -13,6 +13,8 @@ class TextBox {
 		bool dot = 0;
 		
 	public:
+		TextBox() {}
+
 		TextBox(int x, int y, int font_size, Color font_color, Color background_color) {
 			this->font_size = font_size;
 			this->x = x;
