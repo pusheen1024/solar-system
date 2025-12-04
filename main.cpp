@@ -13,13 +13,14 @@ const Vector2 CENTER = {(WIDTH - BAR) / 2, HEIGHT / 2};
 
 ld COEFF = 500; // скорость движения
 const ld EPS = 1e-9;
+const ld G = 6.67e-11; // гравитационная постоянная
 
 const int SPACING = 1; // параметр для шрифта
 Font font;
 
 vector<const char*> paths = {"sun.png", "mercury.png", "venus.png", "earth.png", "mars.png", "jupiter.png", 
 							 "saturn.png", "uranus.png", "neptune.png", "moon.png", "phobos.png", "deimos.png",
-							 "io.png", "europe.png", "ganymede.png", "callisto.png"};
+							 "io.png", "europe.png", "ganymede.png", "callisto.png", "comet.png"};
 vector<Image> images(paths.size());
 vector<Texture2D> textures(paths.size());
 vector<int> show_object(paths.size(), 1);
@@ -78,6 +79,10 @@ class CosmicObject {
 		CosmicObject(Vector2 coords) {
 			this->x = coords.x;
 			this->y = coords.y;
+		}
+		
+		ld getMass() {
+			return mass;
 		}
 
 		const char* getName() {
@@ -416,18 +421,58 @@ class Callisto: public Satellite {
 };
 
 class Comet: public CosmicObject {
-	Comet(ld mass, ld velocity) : CosmicObject() {
-		this->x = 0;
-		this->y = 0;
-		this->mass = mass;
-		this->picture_id = 16;
-		this->diam = this->mass / 100;
-		this->name = "Комета";
-	}
-
-	void updateCoords() {
-	}
+	private:
+		Vector2 velocity;
 	
+	public:
+
+		Comet() : CosmicObject() {}
+
+		Comet(ld mass, float velocity) : CosmicObject() {
+			this->x = 0;
+			this->y = 0;
+			this->mass = mass;
+			this->velocity = {velocity, 0};
+			this->picture_id = 16;
+			this->diam = 10000;
+			this->name = "Комета";
+		}
+	
+		Vector2 getA(Vector2 pos, Sun *sun, vector<Planet*> &planets) { // ускорение кометы (через закон всемирного тяготения)
+			float x = pos.x;
+			float y = pos.y;
+			float dx = x - sun->x;
+			float dy = y - sun->y;
+			float r = sqrt(dx * dx + dy * dy) * (dx * dx + dy * dy);
+			Vector2 a = {0, 0};
+			a.x -= G * sun->getMass() * dx / r;
+			a.y -= G * sun->getMass() * dy / r;
+			for (int i = 0; i < planets.size(); i++) {
+				float dx = x - planets[i]->x;
+				float dy = y - planets[i]->y;
+				float r = sqrt(dx * dx + dy * dy) * (dx * dx + dy * dy);
+				a.x += G * planets[i]->getMass() * dx / r;
+				a.y += G * planets[i]->getMass() * dy / r;
+			}
+			return a;
+		}
+	
+		pair<Vector2, Vector2> deriv(Vector2 pos, Vector2 velocity, Sun *sun, vector<Planet*> &planets) {
+			return {velocity, getA(pos, sun, planets)};
+		}
+
+		// нахождение новых координат методом Рунге-Кутта: y(n + 1) = y(n) + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
+		void updateCoords(Sun *sun, vector<Planet*> &planets) {
+			Vector2 a = this->getA({x, y}, sun, planets);
+			float h = 0.05;
+			auto k1 = deriv({x, y}, velocity, sun, planets);
+			auto k2 = deriv({x + k1.first.x * h / 2, y + k1.first.y * h / 2}, velocity + k1.second * h / 2, sun, planets);
+			auto k3 = deriv({x + k2.first.x * h / 2, y + k2.first.y * h / 2}, velocity + k2.second * h / 2, sun, planets);
+			auto k4 = deriv({x + k3.first.x * h, y + k3.first.y * h}, velocity + k3.second * h, sun, planets);
+			x += (h / 6) * (k1.first.x + k2.first.x * 2 + k3.first.x * 2 + k4.first.x);
+			y += (h / 6) * (k1.first.y + k2.first.y * 2 + k3.first.y * 2 + k4.first.y);
+			velocity += (k1.second + k2.second * 2 + k3.second * 2 + k4.second) * h / 6;
+		}
 };
 
 int main() {
@@ -446,13 +491,19 @@ int main() {
 	Button button = Button("Смоделировать перелёт кометы", WIDTH - BAR, 150, font, 30, BLACK, BLUE);
 	Label label_info = Label("Для приближения используйте колёсико мыши,\n для перемещения - правую кнопку мыши.", WIDTH - BAR, 400, font, 20, RED);
 	Label label_error = Label("", WIDTH - BAR, 250, font, 30, RED);
+	Comet comet = Comet(100, 1);
+	bool fl = 1;
 	auto model_comet = [&]() {
 		ld mass = input_mass.getValue();
-		ld velocity = input_velocity.getValue();
+		float velocity = input_velocity.getValue();
 		if (mass == 0 || velocity == 0) {
 			label_error.setText("Ошибка!");
 		}
-		else label_error.setText("Ok");
+		else {
+			label_error.setText("Ok");
+			//comet = Comet(mass, velocity);
+			fl = 1;
+		}
 	};
 	Sun sun = Sun();
 	Mercury mercury = Mercury();
@@ -553,6 +604,11 @@ int main() {
 		}
 		for (auto obj : objects) {
 			(*obj).render();
+		}
+		if (fl) comet.render();
+		if (fl) {
+			comet.updateCoords(&sun, planets);
+			fl = 0;
 		}
 		EndMode2D();
 		EndDrawing();
