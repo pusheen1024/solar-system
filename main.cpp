@@ -13,6 +13,7 @@ const int HEIGHT = 600;
 const int BAR = 350;
 const Vector2 CENTER = {(WIDTH - BAR) / 2, HEIGHT / 2};
 
+const float ZOOM = 0.05;
 ld COEFF = 500; // скорость движения
 const ld EPS = 1e-9;
 const ld G = 6.67e-11; // гравитационная постоянная
@@ -157,6 +158,7 @@ class RotatingObject: public CosmicObject {
 		ld a; // большая полуось (в миллионах км)
 		ld e; // эксцентриситет
 		ld T; // период (в земных годах)
+		Color orbit_color;
 
 	public:
 		RotatingObject() : CosmicObject() {}
@@ -177,7 +179,7 @@ class RotatingObject: public CosmicObject {
 
 		void drawOrbit() {
 			if (! show_object[picture_id]) return;
-			DrawEllipseLines(center_x(), center_y(), this->getA(), this->getB(), BLUE);
+			DrawEllipseLines(center_x(), center_y(), this->getA(), this->getB(), orbit_color);
 		}
 };
 
@@ -185,6 +187,7 @@ class Planet: public RotatingObject {
 	public:
 		Planet(): RotatingObject() {
 			this->type = "планета";
+			this->orbit_color = BLUE;
 		}
 
 		ld center_x() {
@@ -310,6 +313,7 @@ class Satellite: public RotatingObject {
 		Satellite(Planet* planet) : RotatingObject() {
 			this->planet = planet;
 			this->type = "спутник";
+			this->orbit_color = PURPLE;
 		}
 		
 		ld getA() {
@@ -442,7 +446,8 @@ class Comet: public CosmicObject {
 			this->velocity = {velocity, 0};
 			this->diam = this->mass * 1e4;
 		}
-
+		
+		// координаты моделируем случайным образом
 		void setCoords() {
 			this->x = rnd() % (WIDTH - BAR);
 			this->y = rnd() % (HEIGHT);
@@ -488,6 +493,7 @@ class Comet: public CosmicObject {
 			auto k2 = deriv({x + k1.first.x * h / 2, y + k1.first.y * h / 2}, velocity + k1.second * h / 2, sun, planets);
 			auto k3 = deriv({x + k2.first.x * h / 2, y + k2.first.y * h / 2}, velocity + k2.second * h / 2, sun, planets);
 			auto k4 = deriv({x + k3.first.x * h, y + k3.first.y * h}, velocity + k3.second * h, sun, planets);
+			float ox = x, oy = y;
 			x += (h / 6) * (k1.first.x + k2.first.x * 2 + k3.first.x * 2 + k4.first.x);
 			y += (h / 6) * (k1.first.y + k2.first.y * 2 + k3.first.y * 2 + k4.first.y);
 			velocity += (k1.second + k2.second * 2 + k3.second * 2 + k4.second) * h / 6;
@@ -508,7 +514,7 @@ int main() {
 	Button inc = Button("+", WIDTH - BAR, 80, font, 50, BLACK, BLUE);
 	Button dec = Button("-", WIDTH - BAR + 100, 80, font, 50, BLACK, RED);
 	Button button = Button("Смоделировать перелёт кометы", WIDTH - BAR, 150, font, 30, BLACK, BLUE);
-	Label label_info = Label("Для приближения используйте колёсико мыши,\n для перемещения - правую кнопку мыши.", WIDTH - BAR, 400, font, 20, RED);
+	Label label_info = Label("Для приближения используйте колёсико мыши,\n для перемещения - правую кнопку мыши.\nЧтобы вернуться к исходному состоянию камеры,\n нажмите R.", WIDTH - BAR, 500, font, 20, RED);
 	Label label_error = Label("", WIDTH - BAR, 250, font, 30, RED);
 	Comet comet;
 	bool show_comet = 0;
@@ -560,23 +566,15 @@ int main() {
 		x += 20;
 	}
 	ld t = 0;
+	auto restart_camera = [&]() {
+		camera.zoom = ZOOM;
+		camera.offset = CENTER;
+		camera.target = CENTER;
+	};
+	restart_camera();
     while (!WindowShouldClose()) {
 		BeginDrawing();
-		BeginMode2D(camera);
         ClearBackground(BLACK);
-		DrawRectangle(WIDTH - BAR, 0, BAR, HEIGHT, WHITE);
-		label_mass.render();
-		input_mass.render();
-		button.render();
-		inc.render();
-		dec.render();
-		label_velocity.render();
-		input_velocity.render();
-		label_error.render();
-		label_info.render();
-		for (int i = 0; i < n; i++) labels[i].render();
-		for (auto chkbx : checkboxes) 
-			(&chkbx)->render();
 		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
 			input_mass.setCursor();
 			input_velocity.setCursor();
@@ -598,8 +596,8 @@ int main() {
 			auto pos = GetScreenToWorld2D(GetMousePosition(), camera);
 			camera.offset = GetMousePosition();
 			camera.target = pos;
-			camera.zoom += (wheel * 0.2);
-			if (camera.zoom < 0.2) camera.zoom = 0.2;
+			camera.zoom += (wheel * ZOOM);
+			if (camera.zoom < ZOOM) camera.zoom = ZOOM;
 		}
 		if (input_mass.isActive()) {
 			input_mass.handleKeyboard();
@@ -614,6 +612,10 @@ int main() {
 				(*planet).showText(real_pos);
 			}
 		}
+		if (IsKeyPressed(KEY_R)) {
+			restart_camera();
+		}
+		BeginMode2D(camera);
 		sun.render();
 		for (auto planet : planets) {
 			(*planet).updateCoords(t);
@@ -632,6 +634,20 @@ int main() {
 			comet.updateCoords(&sun, planets);
 		}
 		EndMode2D();
+		DrawRectangle(WIDTH - BAR, 0, BAR, HEIGHT, WHITE);
+		label_mass.render();
+		input_mass.render();
+		button.render();
+		inc.render();
+		dec.render();
+		label_velocity.render();
+		input_velocity.render();
+		label_error.render();
+		label_info.render();
+		for (int i = 0; i < n; i++) labels[i].render();
+		for (auto chkbx : checkboxes) 
+			(&chkbx)->render();
+
 		EndDrawing();
 		t += 0.05;
 	}
