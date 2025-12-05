@@ -3,6 +3,8 @@
 #include "label.h"
 #include "button.h"
 #include <cstring> 
+#include <random>
+#include <ctime>
 
 using namespace std;
 
@@ -14,6 +16,8 @@ const Vector2 CENTER = {(WIDTH - BAR) / 2, HEIGHT / 2};
 ld COEFF = 500; // скорость движения
 const ld EPS = 1e-9;
 const ld G = 6.67e-11; // гравитационная постоянная
+
+mt19937 rnd(time(NULL));
 
 const int SPACING = 1; // параметр для шрифта
 Font font;
@@ -426,33 +430,48 @@ class Comet: public CosmicObject {
 	
 	public:
 
-		Comet() : CosmicObject() {}
+		Comet() : CosmicObject() {
+			this->picture_id = 16;
+			this->name = "Комета";
+		}
 
 		Comet(ld mass, float velocity) : CosmicObject() {
 			this->x = 0;
 			this->y = 0;
 			this->mass = mass;
 			this->velocity = {velocity, 0};
-			this->picture_id = 16;
-			this->diam = 10000;
-			this->name = "Комета";
+			this->diam = this->mass * 1e4;
+		}
+
+		void setCoords() {
+			this->x = rnd() % (WIDTH - BAR);
+			this->y = rnd() % (HEIGHT);
+		}
+
+		void setMass(ld mass) {
+			this->mass = mass;
+			this->diam = this->mass * 1e4;
+		}
+
+		void setVelocity(Vector2 velocity) {
+			this->velocity = velocity;
 		}
 	
 		Vector2 getA(Vector2 pos, Sun *sun, vector<Planet*> &planets) { // ускорение кометы (через закон всемирного тяготения)
 			float x = pos.x;
 			float y = pos.y;
-			float dx = x - sun->x;
-			float dy = y - sun->y;
+			float dx = (x - sun->x) * 1e7;
+			float dy = (y - sun->y) * 1e7;
 			float r = sqrt(dx * dx + dy * dy) * (dx * dx + dy * dy);
 			Vector2 a = {0, 0};
 			a.x -= G * sun->getMass() * dx / r;
 			a.y -= G * sun->getMass() * dy / r;
 			for (int i = 0; i < planets.size(); i++) {
-				float dx = x - planets[i]->x;
-				float dy = y - planets[i]->y;
+				float dx = (x - planets[i]->x) * 1e7;
+				float dy = (y - planets[i]->y) * 1e7;
 				float r = sqrt(dx * dx + dy * dy) * (dx * dx + dy * dy);
-				a.x += G * planets[i]->getMass() * dx / r;
-				a.y += G * planets[i]->getMass() * dy / r;
+				a.x -= G * planets[i]->getMass() * dx / r;
+				a.y -= G * planets[i]->getMass() * dy / r;
 			}
 			return a;
 		}
@@ -491,18 +510,20 @@ int main() {
 	Button button = Button("Смоделировать перелёт кометы", WIDTH - BAR, 150, font, 30, BLACK, BLUE);
 	Label label_info = Label("Для приближения используйте колёсико мыши,\n для перемещения - правую кнопку мыши.", WIDTH - BAR, 400, font, 20, RED);
 	Label label_error = Label("", WIDTH - BAR, 250, font, 30, RED);
-	Comet comet = Comet(100, 1);
-	bool fl = 1;
+	Comet comet;
+	bool show_comet = 0;
 	auto model_comet = [&]() {
 		ld mass = input_mass.getValue();
 		float velocity = input_velocity.getValue();
-		if (mass == 0 || velocity == 0) {
+		if (mass == 0) {
 			label_error.setText("Ошибка!");
 		}
 		else {
 			label_error.setText("Ok");
-			//comet = Comet(mass, velocity);
-			fl = 1;
+			comet.setCoords();
+			comet.setMass(mass);
+			comet.setVelocity({velocity, 0});
+			show_comet = 1;
 		}
 	};
 	Sun sun = Sun();
@@ -541,6 +562,7 @@ int main() {
 	ld t = 0;
     while (!WindowShouldClose()) {
 		BeginDrawing();
+		BeginMode2D(camera);
         ClearBackground(BLACK);
 		DrawRectangle(WIDTH - BAR, 0, BAR, HEIGHT, WHITE);
 		label_mass.render();
@@ -565,7 +587,7 @@ int main() {
 			if (inc.click()) COEFF *= 2;
 			else if (dec.click()) COEFF /= 2;
 		}
-		BeginMode2D(camera);
+		//BeginMode2D(camera);
 		if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
 			Vector2 delta = GetMouseDelta();
 			delta *= (-1 / camera.zoom);
@@ -605,10 +627,9 @@ int main() {
 		for (auto obj : objects) {
 			(*obj).render();
 		}
-		if (fl) comet.render();
-		if (fl) {
+		if (show_comet) {
+			comet.render();
 			comet.updateCoords(&sun, planets);
-			fl = 0;
 		}
 		EndMode2D();
 		EndDrawing();

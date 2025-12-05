@@ -29,7 +29,7 @@ class TextBox {
 		}
 
 		void addSymbol(int key) {
-			if (count >= 10 || ((char)key == '.' && dot)) return;
+			if (count >= 5 || ((char)key == '.' && dot)) return;
 			if (cursor) count--;
 			buffer[count] = char(key);
 			if (buffer[count] == '.') dot ^= 1;
@@ -64,7 +64,7 @@ class TextBox {
 			return cursor;
 		}
 
-		int getValue() {
+		float getValue() {
 			if (! this->buffer) return 0;
 			return TextToFloat(this->buffer);
 		}
