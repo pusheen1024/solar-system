@@ -2,9 +2,6 @@
 #include "textbox.h"
 #include "label.h"
 #include "button.h"
-#include <cstring> 
-#include <random>
-#include <ctime>
 
 using namespace std;
 
@@ -13,8 +10,8 @@ const int HEIGHT = 600;
 const int BAR = 350;
 const Vector2 CENTER = {(WIDTH - BAR) / 2, HEIGHT / 2};
 
-const float ZOOM = 0.05;
-ld COEFF = 500; // скорость движения
+const float ZOOM = 0.05; // приближение камеры
+float COEFF = 500; // скорость движения
 const ld EPS = 1e-9;
 const ld G = 6.67e-11; // гравитационная постоянная
 
@@ -48,12 +45,12 @@ void load_font() {
 // E - e * sin(E) = M; ищем корни трансцендентного уравнения Кеплера методом Ньютона
 // f(E) = E - e * sin(E) - M, f'(E) = 1 - e * cos(E)
 
-float kepler(float M, float e) {
-	float E = M;
+ld kepler(ld M, ld e) {
+	ld E = M;
 	for (int i = 0; i < 100; i++) {
-		float f = E - e * sin(E) - M;
-		float f_deriv = 1 - e * cos(E);
-		float d = f / f_deriv;
+		ld f = E - e * sin(E) - M;
+		ld f_deriv = 1 - e * cos(E);
+		ld d = f / f_deriv;
 		E -= d;
 		if (abs(d) < EPS) break;
 	}
@@ -61,11 +58,11 @@ float kepler(float M, float e) {
 }
 
 class CosmicObject {
-	public:
+	protected:
 		ld mass;
 		ld diam;
-		int picture_id;
 		bool is_resized = 0;
+		int picture_id;
 		bool show_text = 1;
 		const char* name;
 		const char* type;
@@ -81,22 +78,10 @@ class CosmicObject {
 			this->y = CENTER.y;
 		}
 
-		CosmicObject(Vector2 coords) {
-			this->x = coords.x;
-			this->y = coords.y;
-		}
-		
-		ld getMass() {
-			return mass;
-		}
+		ld getMass() {return mass; }
 
-		const char* getName() {
-			return name;
-		}
-
-		virtual const char* getType() {
-			return type;
-		}
+		const char* getName() {return name; }
+		virtual const char* getType() {return type;}
 
 		const char* getInfo() {
 			return TextFormat("%s - %s с массой %Le кг.", name, this->getType(), mass); 
@@ -128,11 +113,11 @@ class CosmicObject {
 				ImageResize(&image, diam / scale, diam / scale);
 				Texture2D texture = LoadTextureFromImage(image);
 				textures[picture_id] = texture;
+				image_width = texture.width;
+				image_height = texture.height;
 				is_resized = 1;
 			}
 			Texture2D texture = textures[picture_id];
-			image_width = texture.width;
-			image_height = texture.height;
 			auto [image_x, image_y] = this->getCoords();	
 			DrawTexture(texture, image_x, image_y, WHITE);
 			if (show_text)
@@ -166,13 +151,13 @@ class RotatingObject: public CosmicObject {
 		virtual ld getA() {return a + image_width / 2; }
 		virtual ld getB() {return a * sqrt(1 - e * e) + image_height / 2; }
 
-		virtual ld center_x() {return 0; }
-		virtual ld center_y() {return 0; }
+		virtual float center_x() {return 0; }
+		virtual float center_y() {return 0; }
 
 		void updateCoords(ld t) {
 			ld M = 2 * PI * (t / (COEFF * T));
 			while (M > 2 * PI) M -= 2 * PI;	
-			auto E = kepler(M, e);
+			ld E = kepler(M, e);
 			x = center_x() + getA() * (cos(E) - e);
 			y = center_y() + getB() * sin(E);
 		}
@@ -190,13 +175,8 @@ class Planet: public RotatingObject {
 			this->orbit_color = BLUE;
 		}
 
-		ld center_x() {
-			return CENTER.x;
-		}
-
-		ld center_y() {
-			return CENTER.y;
-		}
+		float center_x() {return CENTER.x; }
+		float center_y() {return CENTER.y; }
 };
 
 class Mercury: public Planet {
@@ -324,13 +304,8 @@ class Satellite: public RotatingObject {
 			return a * sqrt(1 - e * e) + planet->image_height / 2 + image_height / 2;
 		}
 
-		ld center_x() {
-			return planet->x;
-		}
-
-		ld center_y() {
-			return planet->y;
-		}
+		float center_x() {return planet->x; }
+		float center_y() { return planet->y; }
 
 		const char* getType() {
 			return TextFormat("%s планеты %s", type, planet->getName());
@@ -433,7 +408,6 @@ class Comet: public CosmicObject {
 		Vector2 velocity;
 	
 	public:
-
 		Comet() : CosmicObject() {
 			this->picture_id = 16;
 			this->name = "Комета";
@@ -455,7 +429,7 @@ class Comet: public CosmicObject {
 
 		void setMass(ld mass) {
 			this->mass = mass;
-			this->diam = this->mass * 1e4;
+			this->diam = this->mass * 1e3;
 		}
 
 		void setVelocity(Vector2 velocity) {
@@ -505,17 +479,20 @@ int main() {
     SetTargetFPS(60); 
 	load_images();
 	load_font();
-	Camera2D camera = {0};
-	camera.zoom = 1;
+
 	Label label_mass = Label("Масса кометы", WIDTH - BAR, 0, font, 30, RED);
     TextBox input_mass = TextBox(WIDTH - BAR + 15 + label_mass.getLength(), 0, 30, BLACK, RED);
 	Label label_velocity = Label("Скорость кометы", WIDTH - BAR, 40, font, 30, RED);
 	TextBox input_velocity = TextBox(WIDTH - BAR + 15 + label_velocity.getLength(), 40, 30, BLACK, RED);
-	Button inc = Button("+", WIDTH - BAR, 80, font, 50, BLACK, BLUE);
-	Button dec = Button("-", WIDTH - BAR + 100, 80, font, 50, BLACK, RED);
-	Button button = Button("Смоделировать перелёт кометы", WIDTH - BAR, 150, font, 30, BLACK, BLUE);
-	Label label_info = Label("Для приближения используйте колёсико мыши,\n для перемещения - правую кнопку мыши.\nЧтобы вернуться к исходному состоянию камеры,\n нажмите R.", WIDTH - BAR, 500, font, 20, RED);
+	Button inc_speed = Button("+", WIDTH - BAR, 80, font, 50, BLACK, BLUE);
+	Button dec_speed = Button("-", WIDTH - BAR + 100, 80, font, 50, BLACK, RED);
+	Button comet_button = Button("Смоделировать перелёт кометы", WIDTH - BAR, 150, font, 30, BLACK, BLUE);
+	Label label_info = Label("Для приближения используйте колёсико мыши,\n"
+							 "для перемещения - правую кнопку мыши.\n"
+			 				 "Чтобы вернуться к исходному состоянию\n"
+							 "камеры, нажмите R.", WIDTH - BAR, 500, font, 20, RED);
 	Label label_error = Label("", WIDTH - BAR, 250, font, 30, RED);
+
 	Comet comet;
 	bool show_comet = 0;
 	auto model_comet = [&]() {
@@ -523,15 +500,15 @@ int main() {
 		float velocity = input_velocity.getValue();
 		if (mass == 0) {
 			label_error.setText("Ошибка!");
+			return;
 		}
-		else {
-			label_error.setText("Ok");
-			comet.setCoords();
-			comet.setMass(mass);
-			comet.setVelocity({velocity, 0});
-			show_comet = 1;
-		}
+		label_error.setText("Ok");
+		comet.setCoords();
+		comet.setMass(mass);
+		comet.setVelocity({velocity, 0});
+		show_comet = 1;
 	};
+
 	Sun sun = Sun();
 	Mercury mercury = Mercury();
 	Venus venus = Venus();
@@ -541,6 +518,7 @@ int main() {
 	Saturn saturn = Saturn();
 	Uranus uranus = Uranus();
 	Neptune neptune = Neptune();
+
 	Moon moon = Moon(&earth);
 	Phobos phobos = Phobos(&mars);
 	Deimos deimos = Deimos(&mars);
@@ -548,50 +526,58 @@ int main() {
 	Europe europe = Europe(&jupiter);
 	Hanymede hanymede = Hanymede(&jupiter);
 	Callisto callisto = Callisto(&jupiter);
+
 	vector<Planet*> planets = {&mercury, &venus, &earth, &mars, &jupiter, &saturn, &uranus, &neptune};
 	vector<Satellite*> satellites = {&moon, &phobos, &deimos, &io, &europe, &hanymede, &callisto};
 	vector<CosmicObject*> objects = {&sun};
 	for (auto planet : planets) objects.push_back(planet);
 	for (auto satellite : satellites) objects.push_back(satellite);
 	int n = objects.size();
+
 	vector<Label> labels(n);
 	vector<CheckBox> checkboxes(n);
 	vector<const char*> texts = {"Скрыть", "Отобразить"};
 	vector<Color> colors = {RED, GREEN};
-	int x = 180;
+	float y = 180;
 	for (int i = 0; i < n; i++) {
 		auto info = objects[i]->getInfo();
-		labels[i] = Label(info, WIDTH - BAR, x, font, 20, RED);
-		checkboxes[i] = CheckBox(texts, WIDTH - BAR + 100, x, font, 20, BLACK, colors);
-		x += 20;
+		labels[i] = Label(info, WIDTH - BAR, y, font, 20, RED);
+		checkboxes[i] = CheckBox(texts, WIDTH - BAR + 100, y, font, 20, BLACK, colors);
+		y += 20;
 	}
+
 	ld t = 0;
+	Camera2D camera = {0};
 	auto restart_camera = [&]() {
 		camera.zoom = ZOOM;
 		camera.offset = CENTER;
 		camera.target = CENTER;
 	};
 	restart_camera();
+
     while (!WindowShouldClose()) {
 		BeginDrawing();
         ClearBackground(BLACK);
 		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
 			input_mass.setCursor();
 			input_velocity.setCursor();
-			if (button.click()) model_comet();
+			if (comet_button.click()) model_comet();
 			for (int i = 0; i < n; i++) {
 				if (checkboxes[i].toggle()) show_object[i] ^= 1;
 			}
-			if (inc.click()) COEFF *= 2;
-			else if (dec.click()) COEFF /= 2;
+			Vector2 real_pos = GetScreenToWorld2D(GetMousePosition(), camera);
+			for (auto obj : objects) { 
+				obj->showText(real_pos);
+			}
+			if (inc_speed.click()) COEFF *= 2;
+			else if (dec_speed.click()) COEFF /= 2;
 		}
-		//BeginMode2D(camera);
 		if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
 			Vector2 delta = GetMouseDelta();
 			delta *= (-1 / camera.zoom);
 			camera.target += delta;
 		}
-		ld wheel = GetMouseWheelMove();
+		float wheel = GetMouseWheelMove();
 		if (wheel != 0) {
 			auto pos = GetScreenToWorld2D(GetMousePosition(), camera);
 			camera.offset = GetMousePosition();
@@ -605,18 +591,10 @@ int main() {
 		else if (input_velocity.isActive()) {
 			input_velocity.handleKeyboard();
 		}
-		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {			
-			Vector2 real_pos = GetScreenToWorld2D(GetMousePosition(), camera);
-			sun.showText(real_pos);
-			for (auto planet : planets) { 
-				(*planet).showText(real_pos);
-			}
-		}
 		if (IsKeyPressed(KEY_R)) {
 			restart_camera();
 		}
 		BeginMode2D(camera);
-		sun.render();
 		for (auto planet : planets) {
 			(*planet).updateCoords(t);
 			(*planet).drawOrbit();
@@ -624,33 +602,27 @@ int main() {
 		for (auto satellite : satellites) {
 			(*satellite).updateCoords(t);
 			(*satellite).drawOrbit();
-			(*satellite).render();
 		}
-		for (auto obj : objects) {
-			(*obj).render();
-		}
+		for (auto obj : objects) (*obj).render();
 		if (show_comet) {
-			comet.render();
 			comet.updateCoords(&sun, planets);
+			comet.render();
 		}
 		EndMode2D();
 		DrawRectangle(WIDTH - BAR, 0, BAR, HEIGHT, WHITE);
 		label_mass.render();
 		input_mass.render();
-		button.render();
-		inc.render();
-		dec.render();
+		comet_button.render();
+		inc_speed.render();
+		dec_speed.render();
 		label_velocity.render();
 		input_velocity.render();
-		label_error.render();
 		label_info.render();
+		label_error.render();
 		for (int i = 0; i < n; i++) labels[i].render();
-		for (auto chkbx : checkboxes) 
-			(&chkbx)->render();
-
+		for (auto chkbx : checkboxes) (&chkbx)->render();
 		EndDrawing();
 		t += 0.05;
 	}
     CloseWindow(); 
-    return 0;
 }

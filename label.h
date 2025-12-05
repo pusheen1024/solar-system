@@ -1,10 +1,9 @@
 #include "header.h"
-#include <cstring>
 
 using namespace std;
 
 class Label {
-	public:
+	private:
 		char* text;
 		float x;
 		float y;

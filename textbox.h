@@ -2,23 +2,23 @@
 
 class TextBox {
 	private:
-		char buffer[10] = {0};
+		char buffer[5] = {0};
 		int count = 0;
+		bool dot = 0;
+		bool cursor = 0;
+		float x;
+   		float y;
 		int font_size;
-		int x;
-   		int y;
 		Color font_color;
 		Color background_color;
-		bool cursor = 0;
-		bool dot = 0;
 		
 	public:
 		TextBox() {}
 
-		TextBox(int x, int y, int font_size, Color font_color, Color background_color) {
-			this->font_size = font_size;
+		TextBox(float x, float y, int font_size, Color font_color, Color background_color) {
 			this->x = x;
 			this->y = y;
+			this->font_size = font_size;
 			this->font_color = font_color;
 			this->background_color = background_color;
 		}

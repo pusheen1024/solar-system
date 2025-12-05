@@ -1,13 +1,13 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <cstring>
 #include <cmath>
-#include <algorithm>
 #include <ctime>
+#include <random>
+#include <algorithm>
 
 #include "raylib.h"
 #include "raymath.h"
-
-using namespace std;
 
 typedef long double ld;

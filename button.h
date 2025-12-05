@@ -54,8 +54,7 @@ class CheckBox {
 		bool state = 0; 
 
 	public:
-		CheckBox() {
-		}
+		CheckBox() {}
 
 		CheckBox(vector<const char*> texts, float x, float y, Font font, int font_size, Color font_color, vector<Color> bg_colors) {
 			btn1 = Button(texts[0], x, y, font, font_size, font_color, bg_colors[0]);
@@ -68,7 +67,7 @@ class CheckBox {
 		}
 
 		bool toggle() {
-			if (btn1.isInside(GetMousePosition())) {
+			if ((state ? btn2 : btn1).isInside(GetMousePosition())) {
 				state ^= 1;
 				return 1;
 			}
