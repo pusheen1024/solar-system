@@ -150,11 +150,12 @@ class RotatingObject: public CosmicObject {
 
 		virtual ld getA() {return a + image_width / 2; }
 		virtual ld getB() {return a * sqrt(1 - e * e) + image_height / 2; }
-
+		
 		virtual float center_x() {return 0; }
 		virtual float center_y() {return 0; }
 
 		void updateCoords(ld t) {
+			if (picture_id == 2) t *= (-1); // у Венеры ретроградная орбита
 			ld M = 2 * PI * (t / (COEFF * T));
 			while (M > 2 * PI) M -= 2 * PI;	
 			ld E = kepler(M, e);
@@ -276,7 +277,7 @@ class Neptune: public Planet {
 			this->mass = 1.024e26;
 			this->picture_id = 8;
 			this->a = 4497;
-			this->e = 0.2488;
+			this->e = 0.0086;
 			this->diam = 2376.6;
 			this->T = 164.8;
 			this->name = "Нептун";
