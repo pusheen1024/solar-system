@@ -43,6 +43,7 @@ class Button {
 
 		void render() {
 			DrawRectangle(x, y, this->getLength(), font_size, background_color);
+			DrawRectangleLines(x, y, this->getLength(), font_size, BLACK);
 			DrawTextEx(font, text, {x, y}, font_size, spacing, font_color);
 		}
 };

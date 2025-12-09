@@ -32,6 +32,8 @@ void load_images() {
 		const char* path = TextFormat("assets/%s", paths[i]);
 		Image image = LoadImage(path);
 		images[i] = image;
+		Texture2D texture = LoadTextureFromImage(image);
+		textures[i] = texture;
 	}
 }
 
@@ -60,7 +62,7 @@ ld kepler(ld M, ld e) {
 class CosmicObject {
 	protected:
 		ld mass;
-		ld diam;
+		float diam;
 		bool is_resized = 0;
 		int picture_id;
 		bool show_text = 1;
@@ -81,10 +83,10 @@ class CosmicObject {
 		ld getMass() {return mass; }
 
 		const char* getName() {return name; }
-		virtual const char* getType() {return type;}
+		virtual const char* getType() {return type; }
 
 		const char* getInfo() {
-			return TextFormat("%s - %s с массой %Le кг.", name, this->getType(), mass); 
+			return TextFormat("%s - %s\nс массой %Le кг.", name, this->getType(), mass); 
 		}
 
 		Vector2 getCoords() {
@@ -107,19 +109,14 @@ class CosmicObject {
 		void render() {
 			if (! show_object[picture_id]) return;
 			Image image = images[picture_id];
-			if (! is_resized) {
-				int scale = 1e2;
-				if (picture_id == 0) scale = 1e5;
-				ImageResize(&image, diam / scale, diam / scale);
-				Texture2D texture = LoadTextureFromImage(image);
-				textures[picture_id] = texture;
-				image_width = texture.width;
-				image_height = texture.height;
-				is_resized = 1;
-			}
-			Texture2D texture = textures[picture_id];
+			float scale = (picture_id ? 1e2 : 1e5);
+			image_width = diam / scale;
+			image_height = diam / scale;
 			auto [image_x, image_y] = this->getCoords();	
-			DrawTexture(texture, image_x, image_y, WHITE);
+			Texture2D texture = textures[picture_id];
+			Rectangle src = {0, 0, (float)texture.width, (float)texture.height};
+			Rectangle dest = {image_x, image_y, diam / scale, diam / scale};
+			DrawTexturePro(texture, src, dest, {0, 0}, 0, WHITE);
 			if (show_text)
 				DrawTextEx(font, name, {image_x, image_y}, 20, SPACING, WHITE);
 		}
@@ -149,7 +146,7 @@ class RotatingObject: public CosmicObject {
 		RotatingObject() : CosmicObject() {}
 
 		virtual ld getA() {return a + image_width / 2; }
-		virtual ld getB() {return a * sqrt(1 - e * e) + image_height / 2; }
+		virtual ld getB() {return getA() * sqrt(1 - e * e); }
 		
 		virtual float center_x() {return 0; }
 		virtual float center_y() {return 0; }
@@ -407,19 +404,22 @@ class Callisto: public Satellite {
 class Comet: public CosmicObject {
 	private:
 		Vector2 velocity;
+		float density; // плотность
+		float scale; // масштаб
 	
 	public:
 		Comet() : CosmicObject() {
 			this->picture_id = 16;
 			this->name = "Комета";
+			this->density = 200;
+			this->scale = 1e2;
 		}
 
-		Comet(ld mass, float velocity) : CosmicObject() {
+		Comet(ld mass, float velocity) : Comet() {
 			this->x = 0;
 			this->y = 0;
-			this->mass = mass;
 			this->velocity = {velocity, 0};
-			this->diam = this->mass * 1e4;
+			this->setMass(mass);
 		}
 		
 		// координаты моделируем случайным образом
@@ -430,7 +430,9 @@ class Comet: public CosmicObject {
 
 		void setMass(ld mass) {
 			this->mass = mass;
-			this->diam = this->mass * 1e3;
+			// V = 4/3*pi*R^3 = m/p (p - плотность)
+			// D = 2R = 2 * sqrt3(m/p/(4/3 pi)) = 2 * sqrt3(0.75m/pi/p)
+			this->diam = 2 * pow(0.75 * mass / PI / density, 1.0 / 3) * this->scale;
 		}
 
 		void setVelocity(Vector2 velocity) {
@@ -485,16 +487,16 @@ int main() {
     TextBox input_mass = TextBox(WIDTH - BAR + 15 + label_mass.getLength(), 0, 30, BLACK, RED);
 	Label label_velocity = Label("Скорость кометы", WIDTH - BAR, 40, font, 30, RED);
 	TextBox input_velocity = TextBox(WIDTH - BAR + 15 + label_velocity.getLength(), 40, 30, BLACK, RED);
-	Button inc_speed = Button("+", WIDTH - BAR, 80, font, 50, BLACK, BLUE);
-	Button dec_speed = Button("-", WIDTH - BAR + 100, 80, font, 50, BLACK, RED);
+	Button inc_speed = Button("+", WIDTH - BAR, 80, font, 30, BLACK, BLUE);
+	Button dec_speed = Button("-", WIDTH - BAR + 100, 80, font, 30, BLACK, RED);
 	Button comet_button = Button("Смоделировать перелёт кометы", WIDTH - BAR, 150, font, 30, BLACK, BLUE);
 	Label label_info = Label("Для приближения используйте колёсико мыши,\n"
 							 "для перемещения - правую кнопку мыши.\n"
 			 				 "Чтобы вернуться к исходному состоянию\n"
-							 "камеры, нажмите R.", WIDTH - BAR, 500, font, 20, RED);
+							 "камеры, нажмите R.", WIDTH - BAR, 500, font, 30, RED);
 	Label label_error = Label("", WIDTH - BAR, 250, font, 30, RED);
 
-	Comet comet;
+	Comet comet = Comet();
 	bool show_comet = 0;
 	auto model_comet = [&]() {
 		ld mass = input_mass.getValue();
@@ -519,7 +521,6 @@ int main() {
 	Saturn saturn = Saturn();
 	Uranus uranus = Uranus();
 	Neptune neptune = Neptune();
-
 	Moon moon = Moon(&earth);
 	Phobos phobos = Phobos(&mars);
 	Deimos deimos = Deimos(&mars);
@@ -535,18 +536,22 @@ int main() {
 	for (auto satellite : satellites) objects.push_back(satellite);
 	int n = objects.size();
 
-	vector<Label> labels(n);
+	vector<LabelWithText> labels(n);
 	vector<CheckBox> checkboxes(n);
 	vector<const char*> texts = {"Скрыть", "Отобразить"};
 	vector<Color> colors = {RED, GREEN};
 	float y = 180;
+	float x = WIDTH - BAR;
 	for (int i = 0; i < n; i++) {
 		auto info = objects[i]->getInfo();
-		labels[i] = Label(info, WIDTH - BAR, y, font, 20, RED);
-		checkboxes[i] = CheckBox(texts, WIDTH - BAR + 100, y, font, 20, BLACK, colors);
-		y += 20;
+		labels[i] = LabelWithText(objects[i]->getName(), objects[i]->getInfo(), x, y, font, 20, RED);
+		checkboxes[i] = CheckBox(texts, x + 70, y, font, 20, BLACK, colors);
+		y += 20; // располагаем в 2 столбца
+		if (y > 320) {
+			x += 170;
+			y = 180;
+		}
 	}
-
 	ld t = 0;
 	Camera2D camera = {0};
 	auto restart_camera = [&]() {
@@ -620,8 +625,12 @@ int main() {
 		input_velocity.render();
 		label_info.render();
 		label_error.render();
+		bool show_text = 0;
 		for (int i = 0; i < n; i++) labels[i].render();
 		for (auto chkbx : checkboxes) (&chkbx)->render();
+		for (int i = 0; i < n; i++) {
+			if (labels[i].showText()) break;
+		}
 		EndDrawing();
 		t += 0.05;
 	}

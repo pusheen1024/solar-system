@@ -2,7 +2,7 @@
 
 class TextBox {
 	private:
-		char buffer[5] = {0};
+		char buffer[10] = {0};
 		int count = 0;
 		bool dot = 0;
 		bool cursor = 0;
@@ -29,7 +29,7 @@ class TextBox {
 		}
 
 		void addSymbol(int key) {
-			if (count >= 5 || ((char)key == '.' && dot)) return;
+			if (count >= 10 || ((char)key == '.' && dot)) return;
 			if (cursor) count--;
 			buffer[count] = char(key);
 			if (buffer[count] == '.') dot ^= 1;
