@@ -12,7 +12,7 @@ const int PAGINATION = 5;
 const Vector2 CENTER = {(WIDTH - BAR) / 2, HEIGHT / 2};
 
 const float ZOOM = 0.025; // начальное приближение камеры
-const float MIN_COEFF = 0.5;
+const float MIN_COEFF = 0.1;
 float COEFF = 500; // скорость движения
 float SCALE = 2.5; // масштаб для расстояний
 const ld EPS = 1e-9;
@@ -508,8 +508,8 @@ int main() {
 										 "Чтобы приблизить, используйте колёсико мыши,\n"
 							 			 "Чтобы переместить, зажмите правую кнопку мыши.\n"
 							 			 "Чтобы скрыть название планеты, нажмите на неё.\n"
-			 				 			 "Чтобы вернуться к исходному\n"
-							 			 "состоянию камеры, нажмите R.", 5, 
+			 				 			 "Чтобы вернуться к исходному состоянию\n"
+							 			 "камеры, нажмите на клавиатуре клавишу R.", 5, 
 										 x + 55, 450, font, 50, 25, error_color, hide_color);
 
 
@@ -560,8 +560,8 @@ int main() {
 	float y = 200;
 	for (int i = 0; i < n; i++) {
 		auto info = objects[i]->getInfo();
-		labels[i] = LabelWithText(objects[i]->getName(), objects[i]->getInfo(), 2, x, y, font, 25, 25, font_color);
-		checkboxes[i] = CheckBox(texts, x + 80, y, font, 25, BLACK, colors);
+		labels[i] = LabelWithText(objects[i]->getName(), objects[i]->getInfo(), 2, x + 20, y, font, 25, 25, font_color);
+		checkboxes[i] = CheckBox(texts, x + 110, y, font, 25, BLACK, colors);
 		y += 30; // располагаем в 2 столбца
 		if (y > 200 + 30 * 7) {
 			x += 200;
