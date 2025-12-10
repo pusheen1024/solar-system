@@ -37,34 +37,38 @@ class Label {
             strcpy(this->text, info);
 		}
 
-		void render() {
+		virtual void render() {
 			DrawTextEx(font, text, {x, y}, font_size, spacing, font_color);
 		}
 };
 
 class LabelWithText: public Label {
-	private:
+	protected:
 		char* sub_text;
+		int sub_size;
+		int lines;
 
 	public:
 	LabelWithText() : Label() {}
 
-	LabelWithText(const char* info, const char* sub_info, float x, float y, Font font, int font_size, Color font_color) :
+	LabelWithText(const char* info, const char* sub_info, int lines, float x, float y, Font font, int font_size, int sub_size, Color font_color) :
 	Label(info, x, y, font, font_size, font_color) {
 		sub_text = new char[strlen(sub_info) + 1];
 		strcpy(this->sub_text, sub_info);
+		this->sub_size = sub_size;
+		this->lines = lines;
 	}
 
 	int getSubTextLength() {
-		return MeasureTextEx(font, sub_text, font_size, spacing).x;
+		return MeasureTextEx(font, sub_text, sub_size, spacing).x;
 	}
 
 	void render_info() {
 		auto [x, y] = GetMousePosition();
 		x -= this->getSubTextLength() / 2;
-		DrawRectangle(x, y, this->getSubTextLength(), font_size * 2, RAYWHITE);
-		DrawRectangleLines(x, y, this->getSubTextLength(), font_size * 2, GRAY);
-		DrawTextEx(font, sub_text, {x, y}, font_size, spacing, BLACK);
+		DrawRectangle(x, y, this->getSubTextLength(), (sub_size + 1) * lines, RAYWHITE);
+		DrawRectangleLines(x, y, this->getSubTextLength(), (sub_size + 1) * lines, GRAY);
+		DrawTextEx(font, sub_text, {x, y}, sub_size, spacing, BLACK);
 	}
 
 	bool showText() {
@@ -74,4 +78,22 @@ class LabelWithText: public Label {
 		}
 		return 0;
 	}
+};
+
+class LabelWithBG: public LabelWithText {
+	private:
+		Color bg_color;
+	
+	public:
+		LabelWithBG() : LabelWithText() {}
+
+		LabelWithBG(const char* info, const char* sub_info, int lines, float x, float y, Font font, int font_size, int sub_size, Color font_color, Color bg_color) :
+		LabelWithText(info, sub_info, lines, x, y, font, font_size, sub_size, font_color) {
+			this->bg_color = bg_color;
+		}
+
+		void render() {
+			DrawRectangle(x, y, this->getLength(), font_size, bg_color);
+			DrawTextEx(font, text, {x, y}, font_size, spacing, font_color);
+		}
 };

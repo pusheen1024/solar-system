@@ -7,11 +7,14 @@ using namespace std;
 
 const int WIDTH = 1300;
 const int HEIGHT = 600;
-const int BAR = 350;
+const int BAR = 400;
+const int PAGINATION = 5;
 const Vector2 CENTER = {(WIDTH - BAR) / 2, HEIGHT / 2};
 
-const float ZOOM = 0.05; // приближение камеры
+const float ZOOM = 0.025; // начальное приближение камеры
+const float MIN_COEFF = 0.5;
 float COEFF = 500; // скорость движения
+float SCALE = 2.5; // масштаб для расстояний
 const ld EPS = 1e-9;
 const ld G = 6.67e-11; // гравитационная постоянная
 
@@ -19,6 +22,16 @@ mt19937 rnd(time(NULL));
 
 const int SPACING = 1; // параметр для шрифта
 Font font;
+
+Color inc_color = Color({193, 142, 240, 255});
+Color dec_color = Color({240, 142, 209, 255});
+Color show_color = Color({177, 238, 134, 255});
+Color hide_color = Color({238, 134, 139, 255});
+Color btn_color = Color({181, 98, 228, 255});
+Color font_color = Color({86, 19, 124, 255});
+Color error_color = Color({158, 26, 47, 255});
+Color textbox_color = Color({234, 216, 243, 255});
+Color help_rect = Color({221, 213, 213, 255});
 
 vector<const char*> paths = {"sun.png", "mercury.png", "venus.png", "earth.png", "mars.png", "jupiter.png", 
 							 "saturn.png", "uranus.png", "neptune.png", "moon.png", "phobos.png", "deimos.png",
@@ -63,8 +76,8 @@ class CosmicObject {
 	protected:
 		ld mass;
 		float diam;
-		bool is_resized = 0;
 		int picture_id;
+		bool is_resized = 0;
 		bool show_text = 1;
 		const char* name;
 		const char* type;
@@ -81,7 +94,7 @@ class CosmicObject {
 		}
 
 		ld getMass() {return mass; }
-
+		
 		const char* getName() {return name; }
 		virtual const char* getType() {return type; }
 
@@ -110,8 +123,7 @@ class CosmicObject {
 			if (! show_object[picture_id]) return;
 			Image image = images[picture_id];
 			float scale = (picture_id ? 1e2 : 1e5);
-			image_width = diam / scale;
-			image_height = diam / scale;
+			image_width = image_height = diam / scale;
 			auto [image_x, image_y] = this->getCoords();	
 			Texture2D texture = textures[picture_id];
 			Rectangle src = {0, 0, (float)texture.width, (float)texture.height};
@@ -182,7 +194,7 @@ class Mercury: public Planet {
 		Mercury() : Planet() {
 			this->mass = 3.285e23;
 			this->picture_id = 1;
-			this->a = 57.91;
+			this->a = 57.91 * SCALE;
 			this->e = 0.206;
 			this->diam = 4879.4;
 			this->T = 0.241;
@@ -195,7 +207,7 @@ class Venus: public Planet {
 		Venus() : Planet() {
 			this->mass = 4.867e24;
 			this->picture_id = 2;
-			this->a = 108.2;
+			this->a = 108.2 * SCALE;
 			this->e = 0.0068;
 			this->diam = 12104;
 			this->T = 0.615;
@@ -208,7 +220,7 @@ class Earth: public Planet {
 		Earth() : Planet() {
 			this->mass = 5.9742e24;
 			this->picture_id = 3;
-			this->a = 150;
+			this->a = 150 * SCALE;
 			this->e = 0.0167;
 			this->diam = 12742;
 			this->T = 1;
@@ -221,7 +233,7 @@ class Mars: public Planet {
 		Mars() : Planet() {
 			this->mass = 6.39e23;
 			this->picture_id = 4;
-			this->a = 228;
+			this->a = 228 * SCALE;
 			this->e = 0.00934;
 			this->diam = 6779;
 			this->T = 1.88;
@@ -234,7 +246,7 @@ class Jupiter: public Planet {
 		Jupiter() : Planet() {
 			this->mass = 1.8987e27;
 			this->picture_id = 5;
-			this->a = 778;
+			this->a = 778 * SCALE;
 			this->e = 0.049;
 			this->diam = 139820;
 			this->T = 11.86;
@@ -247,7 +259,7 @@ class Saturn: public Planet {
 		Saturn() : Planet() {
 			this->mass = 5.683e26;
 			this->picture_id = 6;
-			this->a = 1429;
+			this->a = 1429 * SCALE;
 			this->e = 0.0557;
 			this->diam = 116460;
 			this->T = 29.46;
@@ -260,7 +272,7 @@ class Uranus: public Planet {
 		Uranus() : Planet() {
 			this->mass = 8.681e25;
 			this->picture_id = 7;
-			this->a = 2875;
+			this->a = 2875 * SCALE;
 			this->e = 0.047;
 			this->diam = 50724;
 			this->T = 84.02;
@@ -273,7 +285,7 @@ class Neptune: public Planet {
 		Neptune() : Planet() {
 			this->mass = 1.024e26;
 			this->picture_id = 8;
-			this->a = 4497;
+			this->a = 4497 * SCALE;
 			this->e = 0.0086;
 			this->diam = 2376.6;
 			this->T = 164.8;
@@ -315,7 +327,7 @@ class Moon: public Satellite {
 		Moon(Planet* earth) : Satellite(earth) {
 			this->mass = 7.36e22;
 			this->picture_id = 9;
-			this->a = 384748.0 / 1e7;
+			this->a = 384748.0 / 1e7 * SCALE;
 			this->e = 0.0549;
 			this->diam = 3474.8;
 			this->T = 27.32 / 365;
@@ -328,9 +340,9 @@ class Phobos: public Satellite {
 		Phobos(Planet* mars) : Satellite(mars) {
 			this->mass = 1.072e16;
 			this->picture_id = 10;
-			this->a = 9377.0 / 1e7;
+			this->a = 9377.0 / 1e7 * SCALE;
 			this->e = 0.015;
-			this->diam = 22.53;
+			this->diam = 22.53 * 10;
 			this->T = 7.65 / 24 / 365;
 			this->name = "Фобос";
 		}
@@ -341,9 +353,9 @@ class Deimos: public Satellite {
 		Deimos(Planet* mars) : Satellite(mars) {
 			this->mass = 1.48e15;
 			this->picture_id = 11;
-			this->a = 23458 / 1e7;
+			this->a = 23458 / 1e7 * SCALE;
 			this->e = 0.0002;
-			this->diam = 12.4;
+			this->diam = 12.4 * 10;
 			this->T = 1.2624 / 365;
 			this->name = "Деймос";
 		}
@@ -354,7 +366,7 @@ class Io: public Satellite {
 		Io(Planet* jupiter) : Satellite(jupiter) {
 			this->mass = 8.9319e22;
 			this->picture_id = 12;
-			this->a = 421800 / 1e7;
+			this->a = 421800 / 1e7 * SCALE;
 			this->e = 0.0041;
 			this->diam = 3643.2;
 			this->T = 1.769 / 365;
@@ -367,7 +379,7 @@ class Europe: public Satellite {
 		Europe(Planet* jupiter) : Satellite(jupiter) {
 			this->mass = 4.8017e22;
 			this->picture_id = 13;
-			this->a = 671034 / 1e7;
+			this->a = 671034 / 1e7 * SCALE;
 			this->e = 0.0094;
 			this->diam = 3121.6;
 			this->T = 3.55 / 365;
@@ -380,7 +392,7 @@ class Hanymede: public Satellite {
 		Hanymede(Planet* jupiter) : Satellite(jupiter) {
 			this->mass = 1.4819e23;
 			this->picture_id = 14;
-			this->a = 1.07;
+			this->a = 1.07 * SCALE;
 			this->e = 0.0013;
 			this->diam = 5262;
 			this->T = 7.15 / 365;
@@ -482,30 +494,35 @@ int main() {
     SetTargetFPS(60); 
 	load_images();
 	load_font();
+	
+	int x = WIDTH - BAR + PAGINATION;
+	Label label_mass = Label("Масса кометы", x, 0, font, 30, font_color);
+    TextBox input_mass = TextBox(x + 15 + label_mass.getLength(), 0, 30, font_color, textbox_color);
+	Label label_velocity = Label("Скорость кометы", x, 40, font, 30, font_color);
+	TextBox input_velocity = TextBox(x + 15 + label_velocity.getLength(), 40, 30, font_color, textbox_color);
+	Button comet_button = Button("Смоделировать перелёт кометы", x, 80, font, 30, font_color, btn_color);
+	Label label_error = Label("", x, 115, font, 30, error_color);
+	Button inc_speed = Button("Ускорить движение", x, 160, font, 30, font_color, inc_color);
+	Button dec_speed = Button("Замедлить движение", x + 195, 160, font, 30, font_color, dec_color);
+	LabelWithBG label_info = LabelWithBG("Показать справку",
+										 "Чтобы приблизить, используйте колёсико мыши,\n"
+							 			 "Чтобы переместить, зажмите правую кнопку мыши.\n"
+							 			 "Чтобы скрыть название планеты, нажмите на неё.\n"
+			 				 			 "Чтобы вернуться к исходному\n"
+							 			 "состоянию камеры, нажмите R.", 5, 
+										 x + 55, 450, font, 50, 25, error_color, hide_color);
 
-	Label label_mass = Label("Масса кометы", WIDTH - BAR, 0, font, 30, RED);
-    TextBox input_mass = TextBox(WIDTH - BAR + 15 + label_mass.getLength(), 0, 30, BLACK, RED);
-	Label label_velocity = Label("Скорость кометы", WIDTH - BAR, 40, font, 30, RED);
-	TextBox input_velocity = TextBox(WIDTH - BAR + 15 + label_velocity.getLength(), 40, 30, BLACK, RED);
-	Button inc_speed = Button("+", WIDTH - BAR, 80, font, 30, BLACK, BLUE);
-	Button dec_speed = Button("-", WIDTH - BAR + 100, 80, font, 30, BLACK, RED);
-	Button comet_button = Button("Смоделировать перелёт кометы", WIDTH - BAR, 150, font, 30, BLACK, BLUE);
-	Label label_info = Label("Для приближения используйте колёсико мыши,\n"
-							 "для перемещения - правую кнопку мыши.\n"
-			 				 "Чтобы вернуться к исходному состоянию\n"
-							 "камеры, нажмите R.", WIDTH - BAR, 500, font, 30, RED);
-	Label label_error = Label("", WIDTH - BAR, 250, font, 30, RED);
 
 	Comet comet = Comet();
 	bool show_comet = 0;
 	auto model_comet = [&]() {
 		ld mass = input_mass.getValue();
 		float velocity = input_velocity.getValue();
-		if (mass == 0) {
-			label_error.setText("Ошибка!");
+		if (mass == 0 || velocity == 0) {
+			label_error.setText("Ошибка: задано нулевое значение!");
 			return;
 		}
-		label_error.setText("Ok");
+		label_error.setText("Моделирование выполнено.");
 		comet.setCoords();
 		comet.setMass(mass);
 		comet.setVelocity({velocity, 0});
@@ -528,7 +545,6 @@ int main() {
 	Europe europe = Europe(&jupiter);
 	Hanymede hanymede = Hanymede(&jupiter);
 	Callisto callisto = Callisto(&jupiter);
-
 	vector<Planet*> planets = {&mercury, &venus, &earth, &mars, &jupiter, &saturn, &uranus, &neptune};
 	vector<Satellite*> satellites = {&moon, &phobos, &deimos, &io, &europe, &hanymede, &callisto};
 	vector<CosmicObject*> objects = {&sun};
@@ -536,31 +552,30 @@ int main() {
 	for (auto satellite : satellites) objects.push_back(satellite);
 	int n = objects.size();
 
+	// чекбоксы для отображения планет
 	vector<LabelWithText> labels(n);
 	vector<CheckBox> checkboxes(n);
 	vector<const char*> texts = {"Скрыть", "Отобразить"};
-	vector<Color> colors = {RED, GREEN};
-	float y = 180;
-	float x = WIDTH - BAR;
+	vector<Color> colors = {show_color, hide_color};
+	float y = 200;
 	for (int i = 0; i < n; i++) {
 		auto info = objects[i]->getInfo();
-		labels[i] = LabelWithText(objects[i]->getName(), objects[i]->getInfo(), x, y, font, 20, RED);
-		checkboxes[i] = CheckBox(texts, x + 70, y, font, 20, BLACK, colors);
-		y += 20; // располагаем в 2 столбца
-		if (y > 320) {
-			x += 170;
-			y = 180;
+		labels[i] = LabelWithText(objects[i]->getName(), objects[i]->getInfo(), 2, x, y, font, 25, 25, font_color);
+		checkboxes[i] = CheckBox(texts, x + 80, y, font, 25, BLACK, colors);
+		y += 30; // располагаем в 2 столбца
+		if (y > 200 + 30 * 7) {
+			x += 200;
+			y = 200;
 		}
 	}
 	ld t = 0;
 	Camera2D camera = {0};
-	auto restart_camera = [&]() {
+	auto restart_camera = [&]() { // перезапуск камеры
 		camera.zoom = ZOOM;
 		camera.offset = CENTER;
 		camera.target = CENTER;
 	};
 	restart_camera();
-
     while (!WindowShouldClose()) {
 		BeginDrawing();
         ClearBackground(BLACK);
@@ -575,8 +590,8 @@ int main() {
 			for (auto obj : objects) { 
 				obj->showText(real_pos);
 			}
-			if (inc_speed.click()) COEFF *= 2;
-			else if (dec_speed.click()) COEFF /= 2;
+			if (inc_speed.click() && COEFF >= MIN_COEFF * 2) COEFF /= 2;
+			else if (dec_speed.click()) COEFF *= 2;
 		}
 		if (IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
 			Vector2 delta = GetMouseDelta();
@@ -602,7 +617,7 @@ int main() {
 		}
 		BeginMode2D(camera);
 		for (auto planet : planets) {
-			(*planet).updateCoords(t);
+			(*planet).updateCoords(t);	label_info.render();
 			(*planet).drawOrbit();
 		}
 		for (auto satellite : satellites) {
@@ -623,14 +638,15 @@ int main() {
 		dec_speed.render();
 		label_velocity.render();
 		input_velocity.render();
-		label_info.render();
 		label_error.render();
+		label_info.render();
 		bool show_text = 0;
 		for (int i = 0; i < n; i++) labels[i].render();
 		for (auto chkbx : checkboxes) (&chkbx)->render();
 		for (int i = 0; i < n; i++) {
 			if (labels[i].showText()) break;
 		}
+		label_info.showText();
 		EndDrawing();
 		t += 0.05;
 	}
