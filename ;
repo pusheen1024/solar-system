@@ -11,10 +11,10 @@ const int BAR = 400;
 const int PAGINATION = 5;
 const Vector2 CENTER = {(WIDTH - BAR) / 2, HEIGHT / 2};
 
-const float ZOOM = 0.015; // начальное приближение камеры
+const float ZOOM = 0.025; // начальное приближение камеры
 const float MIN_COEFF = 0.1;
 float COEFF = 500; // скорость движения
-float SCALE = 4; // масштаб для расстояний
+float SCALE = 2.5; // масштаб для расстояний
 const ld EPS = 1e-9;
 const ld G = 6.67e-11; // гравитационная постоянная
 
@@ -72,6 +72,19 @@ ld kepler(ld M, ld e) {
 	return E;
 }
 
+// полярный угол вектора
+float polar_angle(float x, float y) {
+	if (x < 0) {
+		if (y >= 0) return PI + atan2(y, x);
+		return -PI + atan2(y, x);
+	}
+	if (x == 0) {
+		if (y > 0) return PI / 2;
+		return -PI / 2;
+	}
+	return atan2(y, x);
+}
+
 class CosmicObject {
 	protected:
 		ld mass;
@@ -122,16 +135,14 @@ class CosmicObject {
 		virtual void render(float angle=0) {
 			if (! show_object[picture_id]) return;
 			Image image = images[picture_id];
-			float scale = (picture_id ? 1e2 : 1e4);
+			float scale = (picture_id ? 1e2 : 1e5);
 			image_width = image_height = diam / scale;
 			Texture2D texture = textures[picture_id];
 			Rectangle src = {0, 0, (float)texture.width, (float)texture.height};
 			Rectangle dest = {x, y, diam / scale, diam / scale};
 			DrawTexturePro(texture, src, dest, {dest.width / 2, dest.height / 2}, angle, WHITE);
-			if (show_text) {
-				auto [image_x, image_y] = getCoords();
-				DrawTextEx(font, name, {image_x, image_y}, 40, SPACING, WHITE);
-			}
+			if (show_text)
+				DrawTextEx(font, name, {x, y}, 20, SPACING, WHITE);
 		}
 
 		~CosmicObject() {}
@@ -158,13 +169,14 @@ class RotatingObject: public CosmicObject {
 	public:
 		RotatingObject() : CosmicObject() {}
 
-		virtual ld getA() {return a; }
-		virtual ld getB() {return a * sqrt(1 - e * e); }
+		virtual ld getA() {return a + image_width / 2; }
+		virtual ld getB() {return getA() * sqrt(1 - e * e); }
 		
 		virtual float center_x() {return 0; }
 		virtual float center_y() {return 0; }
 
 		void updateCoords(ld t) {
+			if (picture_id == 2) t *= (-1); // у Венеры ретроградная орбита
 			ld M = 2 * PI * (t / (COEFF * T));
 			while (M > 2 * PI) M -= 2 * PI;	
 			ld E = kepler(M, e);
@@ -174,19 +186,7 @@ class RotatingObject: public CosmicObject {
 
 		void drawOrbit() {
 			if (! show_object[picture_id]) return;
-			float prev_x = 0;
-			float prev_y = 0;
-			float nx = x, ny = y;
-			for (ld t = 0; t <= 2 * PI; t += 0.01) {
-				ld M = 2 * PI * t;
-				while (M > 2 * PI) M -= 2 * PI;	
-				ld E = kepler(M, e);
-				nx = center_x() + getA() * (cos(E) - e);
-				ny = center_y() + getB() * sin(E);
-				if (prev_x && prev_y) DrawLine(prev_x, prev_y, nx, ny, orbit_color);
-				prev_x = nx;
-				prev_y = ny;
-			}
+			DrawEllipseLines(center_x(), center_y(), this->getA(), this->getB(), orbit_color);
 		}
 };
 
@@ -501,7 +501,9 @@ class Comet: public CosmicObject {
 		}
 
 		void render() {
-			float angle = atan2(velocity.y, velocity.x);
+			float angle = polar_angle(velocity.y, velocity.x);
+			angle += 2 * PI;
+		   	if (angle >= 2 * PI) angle -= 2 * PI;	
 			CosmicObject::render(angle / PI * 180);
 		}
 };
@@ -547,7 +549,6 @@ int main() {
 	};
 
 	Sun sun = Sun();
-
 	Mercury mercury = Mercury();
 	Venus venus = Venus();
 	Earth earth = Earth();
@@ -644,7 +645,7 @@ int main() {
 		}
 		for (auto obj : objects) (*obj).render();
 		if (show_comet) {
-			comet.updateCoords(&sun, planets);
+			//comet.updateCoords(&sun, planets);
 			comet.render();
 		}
 		EndMode2D();
