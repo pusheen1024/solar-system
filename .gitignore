@@ -1,11 +1,10 @@
 *.out
 *.exe
 *.zip
-*.txt
 *.cmake
 *.json
 Makefile
-CMakeFiles
+CMake*
 raylib
 resources*
 *.aux
