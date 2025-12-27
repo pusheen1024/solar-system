@@ -1,2 +1,15 @@
 *.out
+*.exe
+*.zip
 *.txt
+*.cmake
+*.json
+Makefile
+CMakeFiles
+raylib
+resources*
+*.aux
+*.toc
+*.log
+*.pdf
+_minted
