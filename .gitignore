@@ -10,5 +10,7 @@ resources*
 *.aux
 *.toc
 *.log
+*.bbl
+*.blg
 *.pdf
 _minted
